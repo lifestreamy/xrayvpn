@@ -6,6 +6,7 @@ Both engines must bundle exactly the upload-manifest allowlist (+ example) under
 
 from __future__ import annotations
 
+import platform
 import tomllib
 import types
 from pathlib import Path
@@ -68,11 +69,15 @@ def test_nuitka_flags_carry_golden_payload_and_metadata(tmp_path: Path) -> None:
     assert "--file-version=0.4.1" in argv and "--product-version=0.4.1" in argv
     assert f"--output-filename={build_support.artifact_name('0.4.1')}" in argv
     assert str(build_binary.ENTRY) in argv
+    icon_flag = f"--windows-icon-from-ico={build_support.ICON_ICO}"
+    expected = platform.system().lower() == "windows" and build_support.ICON_ICO.is_file()
+    assert (icon_flag in argv) is expected
 
 
 def test_engines_share_single_payload_source() -> None:
     spec = (build_support.CLIENT_DIR / "xrayvpn.spec").read_text(encoding="utf-8")
     assert "stage_payload" in spec and "payload_map" in spec
+    assert "ICON_ICO" in spec and "icon=" in spec
     driver = (build_support.CLIENT_DIR / "build_binary.py").read_text(encoding="utf-8")
     assert "stage_payload" in driver and "payload_map" in driver
     assert spec.count("xrayvpn/payload") == 0 and driver.count("xrayvpn/payload") == 0

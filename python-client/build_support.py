@@ -22,6 +22,7 @@ PAYLOAD_ITEMS = ("roles", "config", "deploy.yml", "inventory.yml.example")
 
 COMPANY_NAME = "korelov.dev"
 PRODUCT_NAME = "xrayvpn"
+ICON_ICO = REPO_ROOT / "assets" / "icon" / "windows" / "xrayvpn.ico"
 FILE_DESCRIPTION = (
     "xrayvpn - Ansible-based toolkit that deploys VLESS REALITY VPN "
     "and generates Amnezia, Clash Verge and FlClash configs"

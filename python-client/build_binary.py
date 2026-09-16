@@ -41,6 +41,8 @@ def nuitka_args(args: argparse.Namespace, staged: Path, version: str, outdir: Pa
         argv.append(f"--onefile-tempdir-spec={ONEFILE_TEMPDIR_SPEC}")
     if platform.system().lower() == "windows":
         argv.append("--windows-console-mode=force")
+        if build_support.ICON_ICO.is_file():
+            argv.append(f"--windows-icon-from-ico={build_support.ICON_ICO}")
     for source, arc in build_support.payload_map(staged):
         flag = "--include-data-dir" if source.is_dir() else "--include-data-files"
         argv.append(f"{flag}={source.as_posix()}={arc}")

@@ -17,6 +17,8 @@ if not version:
 staged = build_support.stage_payload()
 datas = [(str(src), arc) for src, arc in build_support.payload_map(staged)]
 
+icon = str(build_support.ICON_ICO) if build_support.ICON_ICO.is_file() else None
+
 a = Analysis(
     [str(Path(SPECPATH, "src", "xrayvpn", "__main__.py"))],
     pathex=[str(Path(SPECPATH, "src"))],
@@ -31,6 +33,7 @@ exe = EXE(
     a.datas,
     [],
     name=build_support.artifact_name(version),
+    icon=icon,
     debug=False,
     strip=False,
     upx=False,
