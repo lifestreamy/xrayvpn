@@ -221,7 +221,11 @@ def test_output_plain_on_non_tty_end_to_end(monkeypatch) -> None:
 
 
 def test_color_literals_live_only_in_theme() -> None:
-    pattern = re.compile(r"typer\.style|click\.style|\\x1b\[|\bfg=")
+    pattern = re.compile(
+        r"typer\.style|click\.style|\\x1b\[|\bfg="
+        r"|#[0-9a-fA-F]{6}"
+        r"|\[/?[a-z_]*(blue|cyan|magenta|yellow|red|green|white|bright)[a-z_ ]*\]"
+    )
     offenders = []
     for path in sorted(PACKAGE.rglob("*.py")):
         if path.name == "theme.py" or path.parent.name in ("payload", "build"):
