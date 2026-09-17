@@ -32,7 +32,7 @@ def test_build_manifest_urls_and_hashes(tmp_path: Path) -> None:
     (tmp_path / "xrayvpn-0.4.1-windows-x64-portable.exe").write_bytes(b"win")
     (tmp_path / "xrayvpn_client-0.4.1-py3-none-any.whl").write_bytes(b"whl")
     manifest = manifest_mod.build_manifest(
-        "lifestreamy/xray-ansible-auto-setup", "v0.4.1_experimental", tmp_path
+        "lifestreamy/xrayvpn", "v0.4.1_experimental", tmp_path
     )
     assert manifest["version"] == "0.4.1"
     assets = manifest["assets"]

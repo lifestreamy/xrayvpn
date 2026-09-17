@@ -89,9 +89,7 @@ MESSAGES: Final[dict[str, Entry]] = {
     "REPL_WELCOME_AUTHOR": Entry("by:", "автор:"),
     "REPL_WELCOME_AUTHOR_NAME": Entry("Tim Korelov", "Tim Korelov"),
     "REPL_WELCOME_REPO": Entry("repository:", "репозиторий:"),
-    "REPL_WELCOME_REPO_NAME": Entry(
-        "xray-ansible-auto-setup", "xray-ansible-auto-setup"
-    ),
+    "REPL_WELCOME_REPO_NAME": Entry("xrayvpn", "xrayvpn"),
     "REPL_WELCOME_RELEASES": Entry("releases:", "релизы:"),
     "REPL_WELCOME_RELEASES_NAME": Entry("releases/latest", "releases/latest"),
     "REPL_SHORT_HINT": Entry(

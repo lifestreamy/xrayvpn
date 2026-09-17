@@ -103,7 +103,7 @@ The alternative shell clients (`shell-clients/`) accept only connection paramete
 
 ## Standalone binary
 
-The simplest way to use the tool is a single executable from [Releases](https://github.com/lifestreamy/xray-ansible-auto-setup/releases): `xrayvpn-<version>-windows-x64-portable.exe`, `xrayvpn-<version>-linux-x64-portable`, `xrayvpn-<version>-linux-arm64-portable`, `xrayvpn-<version>-macos-arm64-portable`. It embeds the same client and the bundled roles/playbooks (`xrayvpn/payload/…`), so no repository clone and no Python are needed.
+The simplest way to use the tool is a single executable from [Releases](https://github.com/lifestreamy/xrayvpn/releases): `xrayvpn-<version>-windows-x64-portable.exe`, `xrayvpn-<version>-linux-x64-portable`, `xrayvpn-<version>-linux-arm64-portable`, `xrayvpn-<version>-macos-arm64-portable`. It embeds the same client and the bundled roles/playbooks (`xrayvpn/payload/…`), so no repository clone and no Python are needed.
 
 - First run: Windows — SmartScreen "More info → Run anyway" (builds are unsigned); macOS — `chmod +x`, and with Gatekeeper open once via right-click → Open.
 - Double-click (or running with no arguments) opens the console assistant: `deploy` asks for the host and password (hidden), `ru`/`en` switch the language, `help` and `deploy --help` show the rest.

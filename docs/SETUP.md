@@ -103,7 +103,7 @@ uv run --project python-client xrayvpn deploy --use-inventory --no-warp
 
 ## Standalone-приложение
 
-Самый простой способ пользования — единый исполняемый файл из [Releases](https://github.com/lifestreamy/xray-ansible-auto-setup/releases): `xrayvpn-<версия>-windows-x64-portable.exe`, `xrayvpn-<версия>-linux-x64-portable`, `xrayvpn-<версия>-linux-arm64-portable`, `xrayvpn-<версия>-macos-arm64-portable`. Внутри — тот же клиент и встроенный набор ролей/плейбуков (`xrayvpn/payload/…`), поэтому клон репозитория и python не нужны.
+Самый простой способ пользования — единый исполняемый файл из [Releases](https://github.com/lifestreamy/xrayvpn/releases): `xrayvpn-<версия>-windows-x64-portable.exe`, `xrayvpn-<версия>-linux-x64-portable`, `xrayvpn-<версия>-linux-arm64-portable`, `xrayvpn-<версия>-macos-arm64-portable`. Внутри — тот же клиент и встроенный набор ролей/плейбуков (`xrayvpn/payload/…`), поэтому клон репозитория и python не нужны.
 
 - Первый запуск: Windows — SmartScreen «Подробнее → Всё равно выполнить» (сборки без подписи); macOS — `chmod +x`, при Gatekeeper — открыть через ПКМ → «Открыть».
 - Двойной клик (или запуск без аргументов) открывает консольного ассистента: `deploy` спросит узел и пароль скрыто, `ru`/`en` переключают язык, `help` и `deploy --help` показывают остальное.

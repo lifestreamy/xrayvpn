@@ -8,7 +8,7 @@ Works the same on Windows, Linux and macOS; two execution models behind one CLI.
 ## Install and run
 
 The simplest option is the standalone binary with no Python: download the build for your
-platform from [Releases](https://github.com/lifestreamy/xray-ansible-auto-setup/releases)
+platform from [Releases](https://github.com/lifestreamy/xrayvpn/releases)
 (first run and file layout — [../docs/SETUP.en.md](../docs/SETUP.en.md), "Standalone binary"
 section). To build the binary yourself (Nuitka onefile, debug mode, smoke) — [BUILD.en.md](BUILD.en.md).
 

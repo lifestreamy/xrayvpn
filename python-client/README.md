@@ -8,7 +8,7 @@
 ## Установка и запуск
 
 Самый простой вариант — готовая standalone-сборка без Python: скачайте файл своей платформы
-из [Releases](https://github.com/lifestreamy/xray-ansible-auto-setup/releases). Первый запуск и
+из [Releases](https://github.com/lifestreamy/xrayvpn/releases). Первый запуск и
 раскладка файлов — в [../docs/SETUP.md](../docs/SETUP.md), раздел «Standalone-приложение».
 Как собрать самому (Nuitka onefile, режим отладки, smoke) — [BUILD.md](BUILD.md).
 

@@ -299,7 +299,7 @@ def test_welcome_and_help_strings_guards_en_ru(monkeypatch) -> None:
         assert "Just start:" not in en_screen
         assert "REALITY" in en_screen and 'введите "ru"' in en_screen
         assert "Tim Korelov (https://github.com/lifestreamy)" in en_screen
-        assert "xray-ansible-auto-setup" in en_screen
+        assert "repository:" in en_screen and "xrayvpn" in en_screen
         assert "releases/latest" in en_screen
         assert "v1.2.3" in en_screen
         assert "command list" in en_screen and "deploy --help" in en_screen
