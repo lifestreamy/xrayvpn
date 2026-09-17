@@ -5,8 +5,9 @@ English. `apply_ru()` patches the finite set of user-visible strings;
 `revert_ru()` restores the saved originals (idempotent pair, runtime-
 switchable for the REPL session — already-built help options keep the
 language chosen at process start). `apply_palette()` re-styles the rich
-help panels onto the project color tokens (cli/theme.py) and is applied
-unconditionally at startup; it is never reverted. The dependency is pinned
+help panels onto the project color tokens (cli/theme.py), normalizes the EN
+help-suggestion string, and is applied unconditionally at startup before
+`apply_ru()`; it is never reverted. The dependency is pinned
 to typer <0.28: the patches touch private internals, and the pin plus
 tests/test_i18n.py and tests/test_cli_palette.py bound the drift.
 
@@ -51,9 +52,13 @@ PALETTE_OVERRIDES: dict[str, str] = {
     "STYLE_REQUIRED_SHORT": _rich_style("error"),
     "STYLE_REQUIRED_LONG": _rich_style("error"),
     "STYLE_ERRORS_PANEL_BORDER": _rich_style("error"),
+    "STYLE_ERRORS_SUGGESTION": _rich_style("ok", bold=True),
     "STYLE_ABORTED": _rich_style("error"),
     "STYLE_DEPRECATED": _rich_style("error"),
 }
+
+_RICH_HELP_EN = "Try '{command_path} {help_option}' for help."
+_RICH_HELP_RU = "Попробуйте '{command_path} {help_option}' для справки."
 
 
 def apply_palette() -> None:
@@ -61,6 +66,7 @@ def apply_palette() -> None:
 
     for name, value in PALETTE_OVERRIDES.items():
         setattr(rich_utils, name, value)
+    rich_utils.RICH_HELP = _RICH_HELP_EN
 
 
 def disable_click_colorama() -> None:
@@ -150,11 +156,7 @@ def apply_ru() -> None:
     _set(rich_utils, "ABORTED_TEXT", "Прервано.")
     _set(rich_utils, "DEFAULT_STRING", "[по умолчанию: {}]")
     _set(rich_utils, "REQUIRED_LONG_STRING", "[обязательно]")
-    _set(
-        rich_utils,
-        "RICH_HELP",
-        "Попробуйте [blue]'{command_path} {help_option}'[/] для справки.",
-    )
+    _set(rich_utils, "RICH_HELP", _RICH_HELP_RU)
 
     original_write_usage = click_formatting.HelpFormatter.write_usage
 

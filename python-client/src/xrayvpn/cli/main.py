@@ -67,10 +67,10 @@ def _harden_stdio() -> None:
 
 _harden_stdio()
 i18n.preinit()
-if i18n.is_ru():
-    l10n_typer.apply_ru()
 l10n_typer.apply_palette()
 l10n_typer.disable_click_colorama()
+if i18n.is_ru():
+    l10n_typer.apply_ru()
 if os.environ.get("XRAYVPN_THEME_DEBUG") == "1":
     typer.echo(theme.debug_line(), err=True)
 
