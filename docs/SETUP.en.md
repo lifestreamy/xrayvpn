@@ -107,6 +107,7 @@ The simplest way to use the tool is a single executable from [Releases](https://
 
 - First run: Windows — SmartScreen "More info → Run anyway" (builds are unsigned); macOS — `chmod +x`, and with Gatekeeper open once via right-click → Open.
 - Double-click (or running with no arguments) opens the console assistant: `deploy` asks for the host and password (hidden), `ru`/`en` switch the language, `help` and `deploy --help` show the rest.
+- On Windows with Windows Terminal as the default terminal, double-clicking the `.exe` opens a classic conhost window with the app icon (the client relaunches itself via `conhost.exe` — Windows Terminal has no per-app host choice and never shows the app's icon). To stay in a Windows Terminal tab: launch with the `--wt` flag (in any argument position) or set `XRAYVPN_IN_WT=1` — works through a shortcut too. The same relaunch applies to launching the executable directly in a WT tab (profile `commandline`); add `--wt` to the profile arguments or `XRAYVPN_IN_WT=1` to the profile environment to keep it in the tab.
 - Configuration files live next to the binary: `config/settings.yml` and `inventory.yml` (from the same-folder `inventory.yml.example`) behave exactly as in a clone.
 - Workspace resolution order (where the generated inventory, downloaded configs and staging are written): `XRAYVPN_HOME` → the binary's folder (if writable) → per-user state folder (Windows `%LOCALAPPDATA%\xrayvpn`, Linux `~/.local/share/xrayvpn`, macOS `~/Library/Application Support/xrayvpn`) → current folder. Do not put the binary into OneDrive/Google Drive or other synced folders — working files will fight the sync client.
 - When the VPN stops answering: `xrayvpn service status` / `restart` / `logs`; the full sequence — [`docs/RUNBOOK.en.md`](RUNBOOK.en.md).
@@ -116,6 +117,7 @@ The simplest way to use the tool is a single executable from [Releases](https://
 |---|---|
 | `XRAYVPN_LANG` | `ru` / `en` for interface and `--help` (flag `--ru` does the same); falls back to the system locale. |
 | `XRAYVPN_HOME` | explicit workspace folder — overrides the order above. |
+| `XRAYVPN_IN_WT` | `1` — skip the conhost relaunch and keep the Windows Terminal tab (same as the `--wt` flag). |
 | `XRAYVPN_UPDATE_CHECK` | update check is on by default in binary builds (at most once per day, silent on failures); in source runs it is opt-in via `1`. Pre-releases never appear in the hint until a stable release exists. |
 
 ## About the project

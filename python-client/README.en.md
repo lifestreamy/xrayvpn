@@ -58,7 +58,10 @@ CLI syntax without the prefix. `deploy` still asks for the missing pieces and co
 `help` lists the built-ins (`version`, `lang ru|en`, `exit`); `deploy --help` shows every flag of
 the deploy command. The welcome banner is reprinted whenever the language switches
 (`lang ru|en` or just `ru`/`en`) and already shows `service` — the SSH recovery commands.
-Double-clicking the binary and the `.pyw` launchers are this very mode.
+Double-clicking the binary and the `.pyw` launchers are this very mode. On Windows with
+Windows Terminal as the default terminal, double-clicking the `.exe` opens a classic conhost window
+with the app icon (a `conhost.exe` relaunch); to stay in a Windows Terminal tab, use the `--wt`
+flag or `XRAYVPN_IN_WT=1`.
 
 ## Where the deploy goes and where ansible runs
 
