@@ -311,6 +311,17 @@ def _auth_descriptor(pkey: object, password: object) -> str:
     return i18n.t("MAIN_AUTH_AGENT")
 
 
+def _deploy_success_banner(clients_dir: Path) -> None:
+    typer.echo()
+    typer.echo(theme.ok_bold(i18n.t("MAIN_DEPLOY_OK_TITLE")))
+    configs = sorted(p for p in clients_dir.iterdir() if p.is_file()) if clients_dir.is_dir() else []
+    if configs:
+        typer.echo(theme.warn(i18n.t("MAIN_DEPLOY_OK_CONFIGS")))
+        for cfg in configs:
+            typer.echo(theme.warn(f"  - {cfg.name}"))
+    typer.echo(theme.muted(i18n.t("MAIN_DEPLOY_OK_HINT", path=str(clients_dir))))
+
+
 def _collect_overrides(args: dict) -> dict[str, object]:
     overrides: dict[str, object] = {}
     if args.get("runtime") is not None:
@@ -743,6 +754,8 @@ def _run_remote(
             _swap_guard(remote, no_interactive=no_interactive)
             executor = RemoteExecutor(remote, cleanup=cleanup)
             rc = executor.deploy(request, extra_vars=extra_vars)
+            if rc == 0:
+                _deploy_success_banner(request.resolved_clients_dir())
     except SshConnectError as exc:
         typer.echo(theme.err(i18n.t("COMMON_ERR", err=exc)), err=True)
         raise typer.Exit(2) from exc
@@ -946,6 +959,7 @@ def _run_local(
         if temp_inventory is not None:
             temp_inventory.unlink(missing_ok=True)
     typer.echo(theme.ok(i18n.t("MAIN_DONE_LOCAL", path=request.resolved_clients_dir())))
+    _deploy_success_banner(request.resolved_clients_dir())
 
 
 if __name__ == "__main__":

@@ -561,4 +561,17 @@ MESSAGES: Final[dict[str, Entry]] = {
         "[done] configs written to {path}",
         "[готово] конфиги записаны в {path}",
     ),
+    "MAIN_DEPLOY_OK_TITLE": Entry(
+        "DEPLOY SUCCESSFUL — VPN server is up and configs are ready",
+        "ДЕПЛОЙ ЗАВЕРШЁН УСПЕШНО — VPN-сервер поднят, конфиги готовы",
+    ),
+    "MAIN_DEPLOY_OK_CONFIGS": Entry(
+        "Client configs saved:",
+        "Клиентские конфиги сохранены:",
+    ),
+    "MAIN_DEPLOY_OK_HINT": Entry(
+        "Import a config into Amnezia, Clash Verge or FlClash to connect ({path})",
+        "Импортируйте конфиг в Amnezia, Clash Verge или FlClash для подключения ({path})",
+    ),
 }
+
