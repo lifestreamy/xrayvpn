@@ -522,6 +522,13 @@ def deploy(
             help=i18n.t("MAIN_NOINT_OPT"),
         ),
     ] = False,
+    no_config_download: Annotated[
+        bool,
+        typer.Option(
+            "--no-config-download",
+            help=i18n.t("MAIN_NOCONFIGDL_OPT"),
+        ),
+    ] = False,
 ) -> None:
     """Run the deploy playbook against a remote VPS."""
     if ru:
@@ -582,6 +589,7 @@ def deploy(
                     verbosity=verbosity,
                     debug=debug,
                     no_interactive=no_interactive,
+                    download_configs=not no_config_download,
                 )
                 return
 
@@ -594,6 +602,7 @@ def deploy(
                 verbosity=verbosity,
                 debug=debug,
                 inventory_path=inventory,
+                download_configs=not no_config_download,
             )
             # `inventory_path` keeps the user-provided ssh inventory for local mode.
             _run_local(
@@ -668,6 +677,7 @@ def _run_remote(
     verbosity: int,
     debug: bool,
     no_interactive: bool,
+    download_configs: bool = True,
 ) -> None:
     """Remote-mode entry: auth resolution, optional preview, then the executor."""
     user_vars: dict[str, object] = {}
@@ -760,6 +770,7 @@ def _run_remote(
         clients_dir=clients_dir,
         verbosity=verbosity,
         debug=debug,
+        download_configs=download_configs,
     )
     if cleanup == "full-cleanup":
         typer.echo(i18n.t("MAIN_SWAP_KEPT_NOTE"), err=True)
@@ -1000,6 +1011,9 @@ def _run_local(
         if rc != 0:
             _deploy_interrupted_note()
             raise typer.Exit(rc)
+        if not request.download_configs:
+            typer.echo(i18n.t("MAIN_CONFIG_DOWNLOAD_SKIPPED"))
+            raise typer.Exit(0)
         fetch_rc = executor.fetch_configs(request, inventory)
         if fetch_rc:
             typer.echo(

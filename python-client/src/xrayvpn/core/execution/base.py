@@ -29,6 +29,7 @@ class DeployRequest:
     verbosity: int = 0
     debug: bool = False
     inventory_path: Path | None = None
+    download_configs: bool = True
 
     def resolved_workspace(self) -> Path:
         return self.workspace or self.repo_root

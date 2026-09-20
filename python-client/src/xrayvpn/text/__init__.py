@@ -599,6 +599,14 @@ MESSAGES: Final[dict[str, Entry]] = {
         "[done] configs written to {path}",
         "[готово] конфиги записаны в {path}",
     ),
+    "MAIN_NOCONFIGDL_OPT": Entry(
+        "keep the generated client configs on the VPS; do not download them",
+        "оставить сгенерированные клиентские конфиги на VPS; не скачивать их",
+    ),
+    "MAIN_CONFIG_DOWNLOAD_SKIPPED": Entry(
+        "client config download skipped (--no-config-download)",
+        "скачивание клиентских конфигов пропущено (--no-config-download)",
+    ),
     "MAIN_DEPLOY_OK_TITLE": Entry(
         "DEPLOY SUCCESSFUL — VPN server is up and configs are ready",
         "ДЕПЛОЙ ЗАВЕРШЁН УСПЕШНО — VPN-сервер поднят, конфиги готовы",

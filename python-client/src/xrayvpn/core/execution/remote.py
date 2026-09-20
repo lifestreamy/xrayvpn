@@ -301,7 +301,10 @@ class RemoteExecutor:
                         return result.return_code
 
         if not request.dry_run:
-            self.fetch_configs(request.resolved_clients_dir(), fetch_dir(staging))
+            if request.download_configs:
+                self.fetch_configs(request.resolved_clients_dir(), fetch_dir(staging))
+            else:
+                print(i18n.t("MAIN_CONFIG_DOWNLOAD_SKIPPED"))
 
         for command in cleanup_commands(self.cleanup, staging):
             self._remote.run(command, warn=True)
