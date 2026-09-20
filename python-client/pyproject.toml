@@ -20,7 +20,7 @@ dependencies = [
 ]
 
 [project.scripts]
-xrayvpn = "xrayvpn.cli.main:run"
+xrayvpn = "xrayvpn.cli.entry:main"
 
 [build-system]
 requires = ["hatchling"]
