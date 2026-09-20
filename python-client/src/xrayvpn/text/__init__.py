@@ -275,8 +275,10 @@ MESSAGES: Final[dict[str, Entry]] = {
         "Show the version and exit.", "Показать версию и выйти."
     ),
     "MAIN_RU_OPT": Entry(
-        "Russian interface output (prompts, messages, errors, help)",
-        "Русский вывод интерфейса (промпты, сообщения, ошибки, help)",
+        "Переключает вывод интерфейса на русский (Switches interface output to Russian); "
+        "в REPL язык переключается командами ru/en (in REPL use `ru`/`en` to switch)",
+        "Переключает вывод интерфейса на русский (Switches interface output to Russian); "
+        "в REPL язык переключается командами ru/en (in REPL use `ru`/`en` to switch)",
     ),
     "MAIN_PAUSE": Entry(
         "Press Enter to close this window...",
