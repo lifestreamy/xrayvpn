@@ -1,6 +1,7 @@
 ---
 # Python client CI: gate (docs-only classifier) + python-tests (pytest, ruff
-# on ubuntu-24.04/windows/macos; incl. the .pyw <-> CLI-flags contract test).
+# on ubuntu-24.04/windows/macos; incl. the .pyw <-> CLI-flags contract test)
+# + shell-smokes (bash/ps1 wrapper guards, minimum smoke scope).
 # Triggers: pull_request, workflow_dispatch. Gate block duplicated in molecule.yml.
 
 name: python-client
@@ -80,3 +81,71 @@ jobs:
 
       - name: Ruff
         run: uv run python -m ruff check .
+
+  shell-smokes:
+    name: shell smokes (${{ matrix.os }})
+    needs: gate
+    if: needs.gate.outputs.docs_only == 'false'
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, windows-latest]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Bash wrapper syntax check
+        if: runner.os == 'Linux'
+        run: bash -n shell-clients/bash/provision-vpn.sh
+
+      - name: Bash wrapper usage and strict-parser guards
+        if: runner.os == 'Linux'
+        run: |
+          if bash shell-clients/bash/provision-vpn.sh </dev/null >/dev/null 2>&1; then
+            echo "no-args run must fail with usage" >&2
+            exit 1
+          fi
+          if bash shell-clients/bash/provision-vpn.sh --definitely-no-such-flag \
+               -H 203.0.113.7 </dev/null >/dev/null 2>&1; then
+            echo "unknown flag must be rejected" >&2
+            exit 1
+          fi
+
+      - name: Bash wrapper offline dry-run and flag parity
+        if: runner.os == 'Linux'
+        run: |
+          out=$(bash shell-clients/bash/provision-vpn.sh -H 203.0.113.7 \
+                --dry-run </dev/null 2>&1)
+          echo "$out" | grep -q '\[dry-run\] Done'
+          for args in '--runtime native' '--warp' '--no-warp' '--rotate' \
+                      '--xray-port 8443' '--num-clients 5' '--camouflage-domain example.com'; do
+            if ! bash shell-clients/bash/provision-vpn.sh -H 203.0.113.7 --dry-run \
+                 $args </dev/null >/dev/null 2>&1; then
+              echo "flag set rejected -- $args" >&2
+              exit 1
+            fi
+          done
+
+      - name: PowerShell wrapper static parse and param parity
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $errors = $null
+          $path = Join-Path $PWD 'shell-clients\powershell\Provision-VPN.ps1'
+          $ast = [System.Management.Automation.Language.Parser]::ParseFile(
+            $path, [ref]$null, [ref]$errors)
+          if ($errors.Count) {
+            $errors | ForEach-Object { Write-Host $_.Message }
+            exit 1
+          }
+          $required = 'HostName','User','Port','PKey','Pass','DryRun','Runtime',
+            'Warp','Rotate','XrayPort','NumClients','CamouflageDomain'
+          $names = $ast.FindAll(
+            { param($n) $n -is [System.Management.Automation.Language.ParameterAst] },
+            $true) | ForEach-Object { $_.Name.VariablePath.UserPath }
+          $missing = $required | Where-Object { $_ -notin $names }
+          if ($missing) {
+            Write-Host ('missing params: ' + ($missing -join ', '))
+            exit 1
+          }
