@@ -104,6 +104,13 @@ MESSAGES: Final[dict[str, Entry]] = {
     "REPL_WELCOME_REPO_NAME": Entry("xrayvpn", "xrayvpn"),
     "REPL_WELCOME_RELEASES": Entry("releases:", "релизы:"),
     "REPL_WELCOME_RELEASES_NAME": Entry("releases/latest", "releases/latest"),
+    "REPL_WELCOME_RETRY": Entry(
+        "If something got interrupted — just run deploy again. "
+        "If something looks wrong — read the docs:",
+        "Если что-то прервалось — просто повторите деплой. "
+        "Если что-то не так — смотрите docs:",
+    ),
+    "REPL_WELCOME_RETRY_DOCS": Entry("docs", "docs"),
     "REPL_SHORT_HINT": Entry(
         'type "deploy" to start, "help" for the command list, "exit" to leave',
         'введите "deploy" чтобы начать, "help" — список команд, "exit" — выход',
@@ -382,7 +389,8 @@ MESSAGES: Final[dict[str, Entry]] = {
         "  xrayvpn deploy -H 203.0.113.7\n"
         "  xrayvpn deploy -H 203.0.113.7 --runtime docker --no-warp\n"
         "  xrayvpn deploy --dry-run --no-interactive -H 203.0.113.7\n\n"
-        "every override flag is optional; unset flags keep the config/settings.yml defaults.",
+        "every override flag is optional; unset flags keep the config/settings.yml defaults.\n"
+        "if a deploy gets interrupted, just run deploy again — every step is repeatable.",
         "Развёртывание VPN на VPS (цель всегда удалённая). По умолчанию ansible "
         "выполняется на VPS; --execution local запускает плейбук с этой машины.\n\n"
         "примеры:\n"
@@ -390,7 +398,14 @@ MESSAGES: Final[dict[str, Entry]] = {
         "  xrayvpn deploy -H 203.0.113.7 --runtime docker --no-warp\n"
         "  xrayvpn deploy --dry-run --no-interactive -H 203.0.113.7\n\n"
         "каждый переопределяющий флаг необязателен: без него действует значение "
-        "из config/settings.yml.",
+        "из config/settings.yml.\n"
+        "если деплой прервался — просто запусти его заново: все шаги повторяемы.",
+    ),
+    "MAIN_DEPLOY_INTERRUPTED": Entry(
+        "deploy did not finish — no repair needed, just run deploy again, "
+        "every step is repeatable",
+        "деплой не завершён — сервер можно не чинить, запусти деплой заново, "
+        "все шаги повторяемы",
     ),
     "MAIN_EXEC_OPT": Entry(
         "Ansible control node: {modes} (remote default: playbook runs on the VPS)",

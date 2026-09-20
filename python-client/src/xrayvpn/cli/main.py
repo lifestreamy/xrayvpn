@@ -326,6 +326,10 @@ def _deploy_success_banner(clients_dir: Path) -> None:
     typer.echo(theme.muted(i18n.t("MAIN_DEPLOY_OK_HINT", path=str(clients_dir))))
 
 
+def _deploy_interrupted_note() -> None:
+    typer.echo(theme.warn(i18n.t("MAIN_DEPLOY_INTERRUPTED")), err=True)
+
+
 def _collect_overrides(args: dict) -> dict[str, object]:
     overrides: dict[str, object] = {}
     if args.get("runtime") is not None:
@@ -765,13 +769,19 @@ def _run_remote(
             rc = executor.deploy(request, extra_vars=extra_vars)
             if rc == 0:
                 _deploy_success_banner(request.resolved_clients_dir())
+    except KeyboardInterrupt:
+        _deploy_interrupted_note()
+        raise typer.Exit(130) from None
     except SshConnectError as exc:
         typer.echo(theme.err(i18n.t("COMMON_ERR", err=exc)), err=True)
+        _deploy_interrupted_note()
         raise typer.Exit(2) from exc
     if rc == LOCK_HELD_RC:
         typer.echo(theme.err(i18n.t("EXEC_DEPLOY_LOCKED")), err=True)
     elif rc == LOCK_MISSING_RC:
         typer.echo(theme.err(i18n.t("EXEC_DEPLOY_NOFLOCK")), err=True)
+    elif rc != 0:
+        _deploy_interrupted_note()
     raise typer.Exit(rc)
 
 
@@ -961,6 +971,7 @@ def _run_local(
             raise typer.Exit(2) from exc
         rc = executor.deploy(request, inventory)
         if rc != 0:
+            _deploy_interrupted_note()
             raise typer.Exit(rc)
         fetch_rc = executor.fetch_configs(request, inventory)
         if fetch_rc:
@@ -968,7 +979,11 @@ def _run_local(
                 i18n.t("MAIN_ERR_FETCH_CONFIGS", rc=fetch_rc),
                 err=True,
             )
+            _deploy_interrupted_note()
             raise typer.Exit(fetch_rc)
+    except KeyboardInterrupt:
+        _deploy_interrupted_note()
+        raise typer.Exit(130) from None
     finally:
         if temp_inventory is not None:
             temp_inventory.unlink(missing_ok=True)

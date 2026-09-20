@@ -23,6 +23,8 @@ from xrayvpn import __version__, i18n
 from xrayvpn.cli import l10n_typer, prompts, theme
 from xrayvpn.core.update_check import LATEST_RELEASE_PAGE, PROFILE_URL, REPO_URL
 
+REPO_DOCS_URL = REPO_URL + "/tree/main/docs"
+
 REPL_SELFTEST_ENV = "XRAYVPN_REPL_SELFTEST"
 PROMPT = "> "
 _PREFIX_ALIASES = {"xrayvpn", "xrayvpn.exe"}
@@ -188,6 +190,13 @@ def welcome_screen(version: str = __version__) -> str:
     lines += _join_boxes(main_block, other_block)
     lines += [""]
     lines += language.splitlines()
+    lines += [""]
+    lines += [
+        (
+            f"{theme.warn(i18n.t('REPL_WELCOME_RETRY'))} "
+            f"{theme.link(i18n.t('REPL_WELCOME_RETRY_DOCS'), REPO_DOCS_URL)}"
+        )
+    ]
     lines += [""]
     lines += credits.splitlines()
     return _box(lines, color=theme.accent)
