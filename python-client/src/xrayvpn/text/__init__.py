@@ -288,9 +288,11 @@ MESSAGES: Final[dict[str, Entry]] = {
     ),
     "MAIN_RU_OPT": Entry(
         "Переключает вывод интерфейса на русский (Switches interface output to Russian); "
-        "в REPL язык переключается командами ru/en (in REPL use `ru`/`en` to switch)",
+        "в интерактивном режиме язык переключается командами ru/en "
+        "(in interactive mode use `ru`/`en` to switch)",
         "Переключает вывод интерфейса на русский (Switches interface output to Russian); "
-        "в REPL язык переключается командами ru/en (in REPL use `ru`/`en` to switch)",
+        "в интерактивном режиме язык переключается командами ru/en "
+        "(in interactive mode use `ru`/`en` to switch)",
     ),
     "MAIN_PAUSE": Entry(
         "Press Enter to close this window...",
