@@ -10,8 +10,12 @@ from __future__ import annotations
 
 import secrets
 import shlex
+import sys
 import tempfile
+import threading
 import time
+from collections.abc import Callable, Iterator
+from contextlib import ExitStack, contextmanager
 from pathlib import Path
 
 from xrayvpn import i18n
@@ -35,6 +39,18 @@ from xrayvpn.core.transport.remote import Remote
 DEPLOY_LOCK = "/run/lock/xrayvpn-deploy.lock"
 LOCK_MISSING_RC = 76
 LOCK_HELD_RC = 75
+
+HEARTBEAT_INTERVAL_SECONDS = 10.0
+_PROGRESS_TOTAL = 7
+_BOOTSTRAP_STEPS: tuple[tuple[int, str, bool], ...] = (
+    (1, "PYTHON", False),
+    (1, "PYTHON", False),
+    (2, "VENV", True),
+    (3, "PIP", True),
+    (4, "GALAXY", True),
+    (5, "STAGING", False),
+    (5, "STAGING", False),
+)
 
 
 def new_run_id() -> str:
@@ -166,49 +182,123 @@ class RemoteExecutor:
         self._remote = remote
         self.cleanup = cleanup
 
+    @staticmethod
+    def _stage_label(key: str) -> str:
+        match key:
+            case "PYTHON":
+                return i18n.t("MAIN_PROGRESS_PYTHON")
+            case "VENV":
+                return i18n.t("MAIN_PROGRESS_VENV")
+            case "PIP":
+                return i18n.t("MAIN_PROGRESS_PIP")
+            case "GALAXY":
+                return i18n.t("MAIN_PROGRESS_GALAXY")
+            case "STAGING":
+                return i18n.t("MAIN_PROGRESS_STAGING")
+            case "FILES":
+                return i18n.t("MAIN_PROGRESS_FILES")
+            case "PLAYBOOK":
+                return i18n.t("MAIN_PROGRESS_PLAYBOOK")
+            case _:
+                raise ValueError(f"unknown progress stage {key!r}")
+
+    @contextmanager
+    def _progress(self, step: int, key: str, *, heartbeat: bool = False) -> Iterator[Callable[[], None]]:
+        """One `[n/7] stage` line; open until terminated (long stages refresh it
+        with an elapsed-time heartbeat on a TTY)."""
+        line = i18n.t(
+            "MAIN_PROGRESS_STEP", n=step, total=_PROGRESS_TOTAL, stage=self._stage_label(key)
+        )
+        print(line, end="", flush=True)
+        state = {"open": True}
+
+        def terminate() -> None:
+            if state["open"]:
+                state["open"] = False
+                print(flush=True)
+
+        stop = threading.Event()
+        thread: threading.Thread | None = None
+        if heartbeat and sys.stdout.isatty():
+
+            def tick() -> None:
+                started = time.monotonic()
+                while not stop.wait(HEARTBEAT_INTERVAL_SECONDS):
+                    secs = int(time.monotonic() - started)
+                    if state["open"]:
+                        print(
+                            f"\r{i18n.t('MAIN_PROGRESS_TICK', step=line, secs=secs)}",
+                            end="",
+                            flush=True,
+                        )
+
+            thread = threading.Thread(target=tick, name="xrayvpn-progress", daemon=True)
+            thread.start()
+        try:
+            yield terminate
+        finally:
+            stop.set()
+            if thread is not None:
+                thread.join(timeout=HEARTBEAT_INTERVAL_SECONDS + 1.0)
+            terminate()
+
     def deploy(self, request: DeployRequest, extra_vars: dict[str, object]) -> int:
         staging = staging_dir(new_run_id())
-        for command in bootstrap_commands(staging):
-            result = self._remote.run(command, warn=True)
-            if result.failed:
-                print(
-                    i18n.t("EXEC_BOOTSTRAP_FAIL", command=command, err=result.stderr)
-                )
-                return result.return_code
+        commands = bootstrap_commands(staging)
+        with ExitStack() as stack:
+            previous = ""
+            terminate = lambda: None
+            for command, (step, key, beat) in zip(commands, _BOOTSTRAP_STEPS, strict=True):
+                if key != previous:
+                    stack.close()
+                    terminate = stack.enter_context(self._progress(step, key, heartbeat=beat))
+                    previous = key
+                result = self._remote.run(command, warn=True)
+                if result.failed:
+                    terminate()
+                    print(
+                        i18n.t("EXEC_BOOTSTRAP_FAIL", command=command, err=result.stderr)
+                    )
+                    return result.return_code
+            stack.close()
 
-        with tempfile.TemporaryDirectory() as temp_dir:
-            temp = Path(temp_dir)
+            with tempfile.TemporaryDirectory() as temp_dir:
+                temp = Path(temp_dir)
 
-            bundle = temp / "bundle.tar.gz"
-            manifest.build_tarball(request.repo_root, bundle)
-            self._remote.put(bundle, f"{staging}/bundle.tar.gz")
-            extract = (
-                f"tar -xzf {staging}/bundle.tar.gz -C {staging} "
-                f"&& rm -f {staging}/bundle.tar.gz"
-            )
-            result = self._remote.run(extract, warn=True)
-            if result.failed:
-                print(i18n.t("EXEC_EXTRACT_FAIL", err=result.stderr))
-                return result.return_code
+                with self._progress(6, "FILES") as terminate_files:
+                    bundle = temp / "bundle.tar.gz"
+                    manifest.build_tarball(request.repo_root, bundle)
+                    self._remote.put(bundle, f"{staging}/bundle.tar.gz")
+                    extract = (
+                        f"tar -xzf {staging}/bundle.tar.gz -C {staging} "
+                        f"&& rm -f {staging}/bundle.tar.gz"
+                    )
+                    result = self._remote.run(extract, warn=True)
+                    if result.failed:
+                        terminate_files()
+                        print(i18n.t("EXEC_EXTRACT_FAIL", err=result.stderr))
+                        return result.return_code
 
-            inv = temp / "inventory.yml"
-            inv.write_text(
-                build_inventory(
-                    {},
-                    connection="local",
-                    python_interpreter=f"{SERVER_VENV}/bin/python",
-                ),
-                encoding="utf-8",
-            )
-            self._remote.put(inv, f"{staging}/inventory.yml")
-            self._remote.run(f"chmod 0600 {staging}/inventory.yml")
+                    inv = temp / "inventory.yml"
+                    inv.write_text(
+                        build_inventory(
+                            {},
+                            connection="local",
+                            python_interpreter=f"{SERVER_VENV}/bin/python",
+                        ),
+                        encoding="utf-8",
+                    )
+                    self._remote.put(inv, f"{staging}/inventory.yml")
+                    self._remote.run(f"chmod 0600 {staging}/inventory.yml")
 
-            result = self._remote.run(
-                playbook_command(request, extra_vars, staging), warn=True
-            )
-            if result.failed:
-                print(i18n.t("EXEC_PLAYBOOK_FAIL", rc=result.return_code))
-                return result.return_code
+                with self._progress(7, "PLAYBOOK", heartbeat=True) as terminate_playbook:
+                    result = self._remote.run(
+                        playbook_command(request, extra_vars, staging), warn=True
+                    )
+                    if result.failed:
+                        terminate_playbook()
+                        print(i18n.t("EXEC_PLAYBOOK_FAIL", rc=result.return_code))
+                        return result.return_code
 
         if not request.dry_run:
             self.fetch_configs(request.resolved_clients_dir(), fetch_dir(staging))
