@@ -8,6 +8,7 @@ from typing import ClassVar
 from typer.testing import CliRunner
 
 import xrayvpn.cli.main as main_mod
+import xrayvpn.core.conn as conn_mod
 from xrayvpn.cli.main import app
 
 runner = CliRunner()
@@ -56,6 +57,7 @@ def _stub_local_mode(monkeypatch, tmp_path: Path) -> dict[str, object]:
     monkeypatch.setattr(main_mod, "load_settings", lambda root: {})
     monkeypatch.setattr(main_mod, "write_inventory", fake_write_inventory)
     monkeypatch.setattr(main_mod, "LocalExecutor", RecordingExecutor)
+    monkeypatch.setattr(main_mod, "ssh_config_entry", lambda host, **kwargs: None)
     return written
 
 
@@ -185,3 +187,90 @@ def test_plan_shows_alias_resolution(monkeypatch, tmp_path) -> None:
     assert "ssh alias: myvps → 203.0.113.9:2222" in out
     assert "target: root@203.0.113.9:2222" in out
     assert "auth: SSH key" in out
+
+
+def _use_real_ssh_config(monkeypatch, cfg: Path) -> None:
+    monkeypatch.setattr(
+        main_mod,
+        "apply_ssh_config",
+        lambda host, user, port, **kw: conn_mod.apply_ssh_config(
+            host, user, port, config_path=cfg
+        ),
+    )
+    monkeypatch.setattr(
+        main_mod,
+        "ssh_config_entry",
+        lambda host, **kw: conn_mod.ssh_config_entry(host, config_path=cfg),
+    )
+
+
+def test_full_config_block_pins_nothing_without_flags(monkeypatch, tmp_path: Path) -> None:
+    written = _stub_local_mode(monkeypatch, tmp_path)
+    cfg = tmp_path / "ssh_config"
+    cfg.write_text(
+        "Host myvps\n  HostName 203.0.113.9\n  User deploy\n  Port 2222\n",
+        encoding="utf-8",
+    )
+    _use_real_ssh_config(monkeypatch, cfg)
+    _no_getpass(monkeypatch)
+    result = runner.invoke(
+        app, ["deploy", "--execution", "local", "-H", "myvps", "--no-interactive"]
+    )
+    assert result.exit_code == 0, _output(result)
+    content = str(written["content"])
+    assert "ansible_host: myvps" in content
+    assert "ansible_user" not in content
+    assert "ansible_port" not in content
+    assert "ansible_ssh" not in content
+
+
+def test_identityfile_only_alias_delegates_auth(monkeypatch, tmp_path: Path) -> None:
+    written = _stub_local_mode(monkeypatch, tmp_path)
+    alias_key = tmp_path / "alias_id"
+    alias_key.write_text("k", encoding="utf-8")
+    cfg = tmp_path / "ssh_config"
+    cfg.write_text(f"Host myvps\n  IdentityFile {alias_key.as_posix()}\n", encoding="utf-8")
+    _use_real_ssh_config(monkeypatch, cfg)
+    _no_getpass(monkeypatch)
+    result = runner.invoke(
+        app, ["deploy", "--execution", "local", "-H", "myvps", "--no-interactive"]
+    )
+    assert result.exit_code == 0, _output(result)
+    content = str(written["content"])
+    assert "ansible_host: myvps" in content
+    assert "ansible_user" not in content
+    assert "ansible_ssh_private_key_file" not in content
+
+
+def test_explicit_user_flag_pins_user_despite_config(monkeypatch, tmp_path: Path) -> None:
+    written = _stub_local_mode(monkeypatch, tmp_path)
+    flag_key = tmp_path / "flag_id"
+    flag_key.write_text("k", encoding="utf-8")
+    cfg = tmp_path / "ssh_config"
+    cfg.write_text(
+        "Host myvps\n  HostName 203.0.113.9\n  User deploy\n  Port 2222\n",
+        encoding="utf-8",
+    )
+    _use_real_ssh_config(monkeypatch, cfg)
+    _no_getpass(monkeypatch)
+    result = runner.invoke(
+        app,
+        [
+            "deploy",
+            "--execution",
+            "local",
+            "-H",
+            "myvps",
+            "-u",
+            "ops",
+            "--pkey",
+            str(flag_key),
+            "--no-interactive",
+        ],
+    )
+    assert result.exit_code == 0, _output(result)
+    content = str(written["content"])
+    assert "ansible_host: 203.0.113.9" in content
+    assert "ansible_user: ops" in content
+    assert "2222" in content
+    assert "ansible_ssh_private_key_file" in content

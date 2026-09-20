@@ -51,6 +51,7 @@ def _stub_common(monkeypatch, tmp_path: Path) -> Path:
     monkeypatch.setattr(
         main_mod, "apply_ssh_config", lambda host, user, port, **kw: (host, user, port, None)
     )
+    monkeypatch.setattr(main_mod, "ssh_config_entry", lambda host, **kw: None)
     return key
 
 

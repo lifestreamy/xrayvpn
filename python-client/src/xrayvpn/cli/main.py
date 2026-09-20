@@ -30,7 +30,7 @@ from xrayvpn import __version__, i18n
 from xrayvpn.cli import l10n_typer, prompts, repl, service, theme
 from xrayvpn.core import runtime_paths, update_check, wsl
 from xrayvpn.core.config import find_repo_root, load_settings, merge_overrides
-from xrayvpn.core.conn import apply_ssh_config
+from xrayvpn.core.conn import apply_ssh_config, ssh_config_entry
 from xrayvpn.core.deploy_lock import DeployBusy, deploy_lock
 from xrayvpn.core.execution.base import DeployRequest
 from xrayvpn.core.execution.local import DEFAULT_WSL_VENV, LocalExecutor, build_ssh_inventory_vars
@@ -232,13 +232,20 @@ def _inventory_creds(
     payload: Path,
     *,
     host: str | None,
-    user: str,
-    port: int,
+    user: str | None,
+    port: int | None,
     pkey: Path | None,
     password: str | None,
 ) -> tuple[dict[str, str], dict[str, object]]:
     """Parse + validate personal inventory.yml; shared by both execution modes."""
-    if host is not None or pkey is not None or password is not None or user != "root" or port != 22:
+    overrides_given = (
+        host is not None
+        or pkey is not None
+        or password is not None
+        or (user or "root") != "root"
+        or (port or 22) != 22
+    )
+    if overrides_given:
         typer.echo(i18n.t("MAIN_INV_OVERRIDES"), err=True)
     try:
         connection, user_vars = parse_user_inventory(workspace, example_dir=payload)
@@ -458,13 +465,13 @@ def deploy(
         ),
     ] = None,
     user: Annotated[
-        str,
+        str | None,
         typer.Option("--user", "-u", help=i18n.t("COMMON_USER")),
-    ] = "root",
+    ] = None,
     port: Annotated[
-        int,
+        int | None,
         typer.Option("--port", "-p", help=i18n.t("COMMON_PORT")),
-    ] = 22,
+    ] = None,
     pkey: Annotated[
         Path | None,
         typer.Option("--pkey", help=i18n.t("COMMON_PKEY")),
@@ -650,8 +657,8 @@ def _run_remote(
     payload: Path,
     overrides: dict[str, object],
     host: str | None,
-    user: str,
-    port: int,
+    user: str | None,
+    port: int | None,
     pkey: Path | None,
     password: str | None,
     use_inventory: bool,
@@ -689,8 +696,8 @@ def _run_remote(
     else:
         extra_vars = dict(overrides)
         resolved_host = (host or "").strip() or None
-        resolved_user = user
-        resolved_port = port
+        resolved_user = user or "root"
+        resolved_port = port or 22
         resolved_pkey = pkey
         resolved_password = password
 
@@ -834,8 +841,8 @@ def _run_local(
     overrides: dict[str, object],
     request: DeployRequest,
     host: str | None,
-    user: str,
-    port: int,
+    user: str | None,
+    port: int | None,
     pkey: Path | None,
     password: str | None,
     use_inventory: bool,
@@ -873,13 +880,16 @@ def _run_local(
     extra_vars = merge_overrides(user_vars, overrides)
     request.overrides = extra_vars
 
+    user_for_display = str(resolved_user or "root")
+    port_for_display = int(resolved_port or 22)
+
     if request.dry_run:
         typer.echo(
             i18n.t(
                 "MAIN_PREVIEW_LOCAL",
-                user=resolved_user,
+                user=user_for_display,
                 host=resolved_host or "<host>",
-                port=resolved_port,
+                port=port_for_display,
             )
         )
         if wsl.is_windows():
@@ -900,30 +910,45 @@ def _run_local(
         resolved_host = selected
 
     alias: str | None = None
+    ssh_managed = False
+    requested_host = str(resolved_host)
     if not use_inventory:
-        requested = str(resolved_host)
+        entry = ssh_config_entry(requested_host)
         resolved_host, resolved_user, resolved_port, alias_key = apply_ssh_config(
-            requested, str(resolved_user), int(resolved_port)
+            requested_host, str(resolved_user or "root"), int(resolved_port or 22)
         )
-        if resolved_host != requested:
-            alias = requested
-        if resolved_pkey is None and resolved_password is None and alias_key:
+        if resolved_host != requested_host:
+            alias = requested_host
+        ssh_managed = (
+            user is None
+            and port is None
+            and pkey is None
+            and password is None
+            and entry is not None
+        )
+        if (
+            not ssh_managed
+            and resolved_pkey is None
+            and resolved_password is None
+            and alias_key
+        ):
             resolved_pkey = alias_key
 
     if resolved_pkey is not None and resolved_password is not None:
         typer.echo(i18n.t("MAIN_ERR_KEY_AND_PASS"), err=True)
         raise typer.Exit(2)
-    if resolved_pkey is not None and not _key_exists_for_runner(resolved_pkey):
-        typer.echo(i18n.t("MAIN_ERR_KEY_NOT_FOUND", path=resolved_pkey), err=True)
-        raise typer.Exit(2)
-    if not resolved_pkey and not resolved_password:
-        if no_interactive:
-            typer.echo(i18n.t("MAIN_ERR_NOAUTH_NOINTERACTIVE"), err=True)
+    if not ssh_managed:
+        if resolved_pkey is not None and not _key_exists_for_runner(resolved_pkey):
+            typer.echo(i18n.t("MAIN_ERR_KEY_NOT_FOUND", path=resolved_pkey), err=True)
             raise typer.Exit(2)
-        resolved_password = getpass.getpass(i18n.t("COMMON_SSH_PASS_PROMPT"))
-        if not resolved_password:
-            typer.echo(i18n.t("MAIN_ERR_EMPTY_PASSWORD"), err=True)
-            raise typer.Exit(2)
+        if not resolved_pkey and not resolved_password:
+            if no_interactive:
+                typer.echo(i18n.t("MAIN_ERR_NOAUTH_NOINTERACTIVE"), err=True)
+                raise typer.Exit(2)
+            resolved_password = getpass.getpass(i18n.t("COMMON_SSH_PASS_PROMPT"))
+            if not resolved_password:
+                typer.echo(i18n.t("MAIN_ERR_EMPTY_PASSWORD"), err=True)
+                raise typer.Exit(2)
 
     runner_pkey = _key_for_runner(resolved_pkey) if resolved_pkey else None
 
@@ -946,18 +971,20 @@ def _run_local(
     inventory = request.inventory_path
     temp_inventory: Path | None = None
     if inventory is None:
+        if ssh_managed:
+            target = {"host": requested_host}
+        else:
+            target = {
+                "host": str(resolved_host),
+                "user": str(resolved_user or "root"),
+                "port": str(resolved_port or 22),
+                **({"pkey": str(runner_pkey)} if runner_pkey else {}),
+                **({"password": str(resolved_password)} if resolved_password else {}),
+            }
         content = build_inventory(
             {},
             connection="ssh",
-            host_params=build_ssh_inventory_vars(
-                {
-                    "host": str(resolved_host),
-                    "user": str(resolved_user),
-                    "port": str(resolved_port),
-                    **({"pkey": str(runner_pkey)} if runner_pkey else {}),
-                    **({"password": str(resolved_password)} if resolved_password else {}),
-                }
-            ),
+            host_params=build_ssh_inventory_vars(target),
         )
         temp_inventory = write_inventory(workspace, content)
         temp_inventory.chmod(0o600)

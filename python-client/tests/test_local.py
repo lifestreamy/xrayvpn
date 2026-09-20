@@ -49,6 +49,10 @@ def test_ssh_vars_password_and_no_auth() -> None:
     assert not any(k.startswith("ansible_ssh_") for k in bare)
 
 
+def test_ssh_vars_omit_unset_user_port() -> None:
+    assert build_ssh_inventory_vars({"host": "myvps"}) == {"ansible_host": "myvps"}
+
+
 def test_deploy_argv_native(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     monkeypatch.setattr(wsl, "is_windows", lambda: False)
     monkeypatch.setattr(local_mod.shutil, "which", lambda name: None)

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from xrayvpn.core.conn import apply_ssh_config, resolve_connection
+from xrayvpn.core.conn import apply_ssh_config, resolve_connection, ssh_config_entry
 
 
 def _write_config(tmp_path: Path) -> tuple[Path, Path]:
@@ -86,3 +86,17 @@ def test_resolve_connection_alias_yields_to_password(tmp_path: Path) -> None:
     )
     assert conn.pkey is None and conn.password == "pw"
     assert conn.host == "203.0.113.9" and conn.user == "admin"
+
+
+def test_ssh_config_entry_exposes_raw_lookup(tmp_path: Path) -> None:
+    cfg, _ = _write_config(tmp_path)
+    entry = ssh_config_entry("myvps", config_path=cfg)
+    assert entry is not None
+    assert entry["hostname"] == "203.0.113.9"
+    assert entry["user"] == "admin"
+    assert str(entry["port"]) == "2222"
+    assert entry["identityfile"]
+    bare = ssh_config_entry("bare", config_path=cfg)
+    assert bare and bare["hostname"] == "203.0.113.10"
+    assert ssh_config_entry("plain.example", config_path=cfg) is None
+    assert ssh_config_entry("h", config_path=tmp_path / "missing") is None

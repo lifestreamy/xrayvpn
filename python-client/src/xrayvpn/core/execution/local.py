@@ -105,12 +105,13 @@ FETCH_PLAYBOOK = """- name: Fetch client configs
 
 
 def build_ssh_inventory_vars(target: dict[str, str]) -> dict[str, str]:
-    """Host vars for an ssh-target inventory; the host name stays `vpn`."""
-    params = {
-        "ansible_host": target["host"],
-        "ansible_user": target["user"],
-        "ansible_port": str(target.get("port", "22")),
-    }
+    """Host vars for an ssh-target inventory; the host name stays `vpn`.
+    A user/port that the ssh config fully governs is omitted, not pinned."""
+    params: dict[str, str] = {"ansible_host": target["host"]}
+    if target.get("user"):
+        params["ansible_user"] = target["user"]
+    if target.get("port"):
+        params["ansible_port"] = str(target["port"])
     if target.get("pkey"):
         params["ansible_ssh_private_key_file"] = target["pkey"]
     elif target.get("password"):

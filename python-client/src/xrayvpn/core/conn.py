@@ -25,6 +25,39 @@ class ConnResolveError(RuntimeError):
     """Operator-facing connection problem; the CLI prints it as `error: …`."""
 
 
+def _load_ssh_config(
+    config_path: Path | str | None,
+) -> paramiko.SSHConfig | None:
+    path = Path(config_path) if config_path is not None else Path.home() / ".ssh" / "config"
+    if not path.is_file():
+        return None
+    try:
+        with path.open(encoding="utf-8") as handle:
+            return paramiko.SSHConfig.from_file(handle)
+    except OSError:
+        return None
+
+
+def ssh_config_entry(
+    host: str,
+    *,
+    config_path: Path | str | None = None,
+) -> dict[str, object] | None:
+    """The ~/.ssh/config block matched for `host` (same lookup as
+    apply_ssh_config); None when nothing config-side governs this host
+    (paramiko echoes the bare hostname for unmatched hosts)."""
+    config = _load_ssh_config(config_path)
+    if config is None:
+        return None
+    entry = config.lookup(host)
+    if not entry:
+        return None
+    governing = [(key, value) for key, value in entry.items() if key != "hostname"]
+    if not governing and entry.get("hostname") in (None, host):
+        return None
+    return entry
+
+
 def apply_ssh_config(
     host: str,
     user: str,
@@ -39,13 +72,8 @@ def apply_ssh_config(
     wins. ProxyCommand/ProxyJump are not supported and ignored. Returns
     (host, user, port, first-existing identityfile or None).
     """
-    path = Path(config_path) if config_path is not None else Path.home() / ".ssh" / "config"
-    if not path.is_file():
-        return host, user, port, None
-    try:
-        with path.open(encoding="utf-8") as handle:
-            config = paramiko.SSHConfig.from_file(handle)
-    except OSError:
+    config = _load_ssh_config(config_path)
+    if config is None:
         return host, user, port, None
     lookup = config.lookup(host)
     if not lookup:
