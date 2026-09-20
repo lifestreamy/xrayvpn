@@ -31,13 +31,17 @@ from xrayvpn.cli import l10n_typer, prompts, repl, service, theme
 from xrayvpn.core import runtime_paths, update_check, wsl
 from xrayvpn.core.config import find_repo_root, load_settings, merge_overrides
 from xrayvpn.core.conn import apply_ssh_config
+from xrayvpn.core.deploy_lock import DeployBusy, deploy_lock
 from xrayvpn.core.execution.base import DeployRequest
 from xrayvpn.core.execution.local import DEFAULT_WSL_VENV, LocalExecutor, build_ssh_inventory_vars
 from xrayvpn.core.execution.remote import (
+    LOCK_HELD_RC,
+    LOCK_MISSING_RC,
     RemoteExecutor,
     bootstrap_commands,
     cleanup_commands,
     playbook_command,
+    staging_dir,
     swap_guard_commands,
     swap_guard_needed,
     swap_status_commands,
@@ -547,54 +551,59 @@ def deploy(
     verbosity = 4 if verbose else (3 if debug else 0)
     cleanup = "full-cleanup" if full_cleanup else ("no-cleanup" if no_cleanup else "cleanup")
 
-    if mode == "remote":
-        _run_remote(
-            repo_root,
-            workspace=workspace,
-            payload=payload,
-            overrides=overrides,
-            host=host,
-            user=user,
-            port=port,
-            pkey=pkey,
-            password=password,
-            use_inventory=use_inventory,
-            clients_dir=clients_dir,
-            cleanup=cleanup,
-            dry_run=dry_run,
-            verbosity=verbosity,
-            debug=debug,
-            no_interactive=no_interactive,
-        )
-        return
+    try:
+        with deploy_lock():
+            if mode == "remote":
+                _run_remote(
+                    repo_root,
+                    workspace=workspace,
+                    payload=payload,
+                    overrides=overrides,
+                    host=host,
+                    user=user,
+                    port=port,
+                    pkey=pkey,
+                    password=password,
+                    use_inventory=use_inventory,
+                    clients_dir=clients_dir,
+                    cleanup=cleanup,
+                    dry_run=dry_run,
+                    verbosity=verbosity,
+                    debug=debug,
+                    no_interactive=no_interactive,
+                )
+                return
 
-    request = DeployRequest(
-        repo_root=repo_root,
-        workspace=workspace,
-        overrides=overrides,
-        clients_dir=clients_dir,
-        dry_run=dry_run,
-        verbosity=verbosity,
-        debug=debug,
-        inventory_path=inventory,
-    )
-    # `inventory_path` keeps the user-provided ssh inventory for local mode.
-    _run_local(
-        workspace,
-        payload=payload,
-        overrides=overrides,
-        request=request,
-        host=host,
-        user=user,
-        port=port,
-        pkey=pkey,
-        password=password,
-        use_inventory=use_inventory,
-        cleanup=cleanup,
-        wsl_venv=wsl_venv,
-        wsl_distro=wsl_distro,
-        no_interactive=no_interactive,
-    )
+            request = DeployRequest(
+                repo_root=repo_root,
+                workspace=workspace,
+                overrides=overrides,
+                clients_dir=clients_dir,
+                dry_run=dry_run,
+                verbosity=verbosity,
+                debug=debug,
+                inventory_path=inventory,
+            )
+            # `inventory_path` keeps the user-provided ssh inventory for local mode.
+            _run_local(
+                workspace,
+                payload=payload,
+                overrides=overrides,
+                request=request,
+                host=host,
+                user=user,
+                port=port,
+                pkey=pkey,
+                password=password,
+                use_inventory=use_inventory,
+                cleanup=cleanup,
+                wsl_venv=wsl_venv,
+                wsl_distro=wsl_distro,
+                no_interactive=no_interactive,
+            )
+    except DeployBusy as exc:
+        typer.echo(theme.err(i18n.t("EXEC_DEPLOY_BUSY", lock=str(exc))), err=True)
+        raise typer.Exit(3) from exc
 
 
 def _swap_guard(remote: FabricRemote, *, no_interactive: bool) -> None:
@@ -759,6 +768,10 @@ def _run_remote(
     except SshConnectError as exc:
         typer.echo(theme.err(i18n.t("COMMON_ERR", err=exc)), err=True)
         raise typer.Exit(2) from exc
+    if rc == LOCK_HELD_RC:
+        typer.echo(theme.err(i18n.t("EXEC_DEPLOY_LOCKED")), err=True)
+    elif rc == LOCK_MISSING_RC:
+        typer.echo(theme.err(i18n.t("EXEC_DEPLOY_NOFLOCK")), err=True)
     raise typer.Exit(rc)
 
 
@@ -773,7 +786,8 @@ def _preview_remote(
     """Remote dry-run: show the plan without connecting anywhere."""
     typer.echo(i18n.t("MAIN_PREVIEW_REMOTE", host=host or "<host>"))
     typer.echo(i18n.t("MAIN_PREVIEW_SWAP_GUARD"))
-    for command in bootstrap_commands():
+    preview_staging = staging_dir("preview")
+    for command in bootstrap_commands(preview_staging):
         typer.echo(f"[preview] $ {command}")
     typer.echo(i18n.t("MAIN_PREVIEW_UPLOAD"))
     from xrayvpn.core import manifest
@@ -781,8 +795,8 @@ def _preview_remote(
     for entry in manifest.allowlist_entries(repo_root):
         typer.echo(f"[preview]   {entry.name}")
     request = DeployRequest(repo_root=repo_root, overrides={}, verbosity=verbosity, debug=debug)
-    typer.echo(f"[preview] $ {playbook_command(request, extra_vars)}")
-    for command in cleanup_commands(cleanup):
+    typer.echo(f"[preview] $ {playbook_command(request, extra_vars, preview_staging)}")
+    for command in cleanup_commands(cleanup, preview_staging):
         typer.echo(f"[preview] $ {command}")
 
 

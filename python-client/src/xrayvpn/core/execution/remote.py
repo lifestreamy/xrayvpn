@@ -8,8 +8,10 @@ cleanup per mode. No dependency on GitHub or on the shell clients.
 
 from __future__ import annotations
 
+import secrets
 import shlex
 import tempfile
+import time
 from pathlib import Path
 
 from xrayvpn import i18n
@@ -21,7 +23,6 @@ from xrayvpn.core.config import (
     GALAXY_COLLECTION,
     GALAXY_COLLECTION_DIR,
     SERVER_COLLECTIONS,
-    SERVER_FETCH_DIR,
     SERVER_STAGING,
     SERVER_VENV,
     SWAP_GUARD_MIN_RAM_KB,
@@ -31,8 +32,29 @@ from xrayvpn.core.execution.base import DeployRequest, extra_var_args
 from xrayvpn.core.inventory import build_inventory
 from xrayvpn.core.transport.remote import Remote
 
+DEPLOY_LOCK = "/run/lock/xrayvpn-deploy.lock"
+LOCK_MISSING_RC = 76
+LOCK_HELD_RC = 75
 
-def bootstrap_commands() -> list[str]:
+
+def new_run_id() -> str:
+    return f"{int(time.time())}-{secrets.token_hex(3)}"
+
+
+def staging_dir(run_id: str) -> str:
+    return f"{SERVER_STAGING}-{run_id}"
+
+
+def fetch_dir(staging: str) -> str:
+    return f"{staging}/fetch"
+
+
+def _locked(command: str) -> str:
+    """Serialize mutating server commands; fd-based flock dies with the process."""
+    return f"exec 200>{DEPLOY_LOCK}; flock -n 200 || exit {LOCK_HELD_RC}; {command}"
+
+
+def bootstrap_commands(staging: str) -> list[str]:
     """Idempotent server preparation (venv cached between runs).
 
     Privileged steps run through `sudo -n` (no-op when the SSH user is root;
@@ -42,28 +64,32 @@ def bootstrap_commands() -> list[str]:
     (inside `bash -c` we are already root, no extra sudo).
     """
     return [
-        "python3 -V",
-        (
+        f"command -v flock >/dev/null 2>&1 || exit {LOCK_MISSING_RC}",
+        _locked("python3 -V"),
+        _locked(
             f"sudo -n [ -x {SERVER_VENV}/bin/python ] || "
             f"sudo -n bash -c 'python3 -m venv {SERVER_VENV} || "
             f"{{ apt-get update -y && apt-get install -y {ANSIBLE_VENV_APT_PKG} && "
             f"python3 -m venv {SERVER_VENV}; }}'"
         ),
-        f"sudo -n {SERVER_VENV}/bin/pip install -q ansible-core=={ANSIBLE_CORE_PIN}",
-        (
+        _locked(f"sudo -n {SERVER_VENV}/bin/pip install -q ansible-core=={ANSIBLE_CORE_PIN}"),
+        _locked(
             f"sudo -n [ -d {SERVER_COLLECTIONS}/{GALAXY_COLLECTION_DIR} ] || "
             f"sudo -n {SERVER_VENV}/bin/ansible-galaxy collection install {GALAXY_COLLECTION} "
             f"-p {SERVER_COLLECTIONS}"
         ),
-        f"mkdir -p {SERVER_STAGING} {SERVER_FETCH_DIR}",
+        _locked(f"mkdir -p {staging} {fetch_dir(staging)}"),
+        _locked("find /tmp -maxdepth 1 -name 'xrayvpn-*' -mmin +1440 -exec rm -rf {} + || true"),
     ]
 
 
-def playbook_command(request: DeployRequest, extra_vars: dict[str, object]) -> str:
+def playbook_command(
+    request: DeployRequest, extra_vars: dict[str, object], staging: str
+) -> str:
     """The ansible-playbook invocation on the server (collections from the venv)."""
     parts = [
         "cd",
-        SERVER_STAGING,
+        staging,
         "&&",
         f"ANSIBLE_COLLECTIONS_PATH={SERVER_COLLECTIONS}",
         f"{SERVER_VENV}/bin/ansible-playbook",
@@ -82,16 +108,16 @@ def playbook_command(request: DeployRequest, extra_vars: dict[str, object]) -> s
     parts += [flag, shlex.quote(payload)]
     if request.dry_run:
         parts.append("--check")
-    return " ".join(parts)
+    return _locked(" ".join(parts))
 
 
-def cleanup_commands(mode: str) -> list[str]:
+def cleanup_commands(mode: str, staging: str) -> list[str]:
     """Cleanup semantics: cleanup keeps the venv cache; full-cleanup removes it."""
     if mode == "full-cleanup":
-        return [f"rm -rf {SERVER_STAGING} {SERVER_VENV}"]
+        return [f"rm -rf {staging} {SERVER_VENV}"]
     if mode == "no-cleanup":
         return []
-    return [f"rm -rf {SERVER_STAGING}"]
+    return [f"rm -rf {staging}"]
 
 
 def swap_status_commands() -> list[str]:
@@ -141,12 +167,13 @@ class RemoteExecutor:
         self.cleanup = cleanup
 
     def deploy(self, request: DeployRequest, extra_vars: dict[str, object]) -> int:
-        for command in bootstrap_commands():
+        staging = staging_dir(new_run_id())
+        for command in bootstrap_commands(staging):
             result = self._remote.run(command, warn=True)
             if result.failed:
                 print(
                     i18n.t("EXEC_BOOTSTRAP_FAIL", command=command, err=result.stderr)
-            )
+                )
                 return result.return_code
 
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -154,10 +181,10 @@ class RemoteExecutor:
 
             bundle = temp / "bundle.tar.gz"
             manifest.build_tarball(request.repo_root, bundle)
-            self._remote.put(bundle, f"{SERVER_STAGING}/bundle.tar.gz")
+            self._remote.put(bundle, f"{staging}/bundle.tar.gz")
             extract = (
-                f"tar -xzf {SERVER_STAGING}/bundle.tar.gz -C {SERVER_STAGING} "
-                f"&& rm -f {SERVER_STAGING}/bundle.tar.gz"
+                f"tar -xzf {staging}/bundle.tar.gz -C {staging} "
+                f"&& rm -f {staging}/bundle.tar.gz"
             )
             result = self._remote.run(extract, warn=True)
             if result.failed:
@@ -173,35 +200,37 @@ class RemoteExecutor:
                 ),
                 encoding="utf-8",
             )
-            self._remote.put(inv, f"{SERVER_STAGING}/inventory.yml")
-            self._remote.run(f"chmod 0600 {SERVER_STAGING}/inventory.yml")
+            self._remote.put(inv, f"{staging}/inventory.yml")
+            self._remote.run(f"chmod 0600 {staging}/inventory.yml")
 
-            result = self._remote.run(playbook_command(request, extra_vars), warn=True)
+            result = self._remote.run(
+                playbook_command(request, extra_vars, staging), warn=True
+            )
             if result.failed:
                 print(i18n.t("EXEC_PLAYBOOK_FAIL", rc=result.return_code))
                 return result.return_code
 
         if not request.dry_run:
-            self.fetch_configs(request.resolved_clients_dir())
+            self.fetch_configs(request.resolved_clients_dir(), fetch_dir(staging))
 
-        for command in cleanup_commands(self.cleanup):
+        for command in cleanup_commands(self.cleanup, staging):
             self._remote.run(command, warn=True)
         return 0
 
-    def fetch_configs(self, clients_dir: Path) -> None:
+    def fetch_configs(self, clients_dir: Path, staging_fetch_dir: str) -> None:
         """Stage the generated configs via sudo, then download them by SFTP."""
         clients_dir.mkdir(parents=True, exist_ok=True)
         # Glob must expand INSIDE sudo (the SSH user cannot read /root/vpn-configs);
         # root's umask may deny reads, so grant explicit world-read access.
         prepare = (
-            f"sudo -n bash -c 'mkdir -p {SERVER_FETCH_DIR} && "
-            f"cp {CONFIG_SOURCE}/*.json {CONFIG_SOURCE}/*.yaml {SERVER_FETCH_DIR}/ "
-            f"2>/dev/null && chmod -R a+rX {SERVER_FETCH_DIR} || true'"
+            f"sudo -n bash -c 'mkdir -p {staging_fetch_dir} && "
+            f"cp {CONFIG_SOURCE}/*.json {CONFIG_SOURCE}/*.yaml {staging_fetch_dir}/ "
+            f"2>/dev/null && chmod -R a+rX {staging_fetch_dir} || true'"
         )
         self._remote.run(prepare, warn=True)
-        listing = self._remote.run(f"ls {SERVER_FETCH_DIR}", warn=True)
+        listing = self._remote.run(f"ls {staging_fetch_dir}", warn=True)
         for name in fetch_targets(listing.stdout):
-            remote_path = f"{SERVER_FETCH_DIR}/{name}"
+            remote_path = f"{staging_fetch_dir}/{name}"
             local_path = clients_dir / name
             self._remote.get(remote_path, local_path)
             print(i18n.t("EXEC_FETCHED", name=name))

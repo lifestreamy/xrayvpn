@@ -40,6 +40,18 @@ MESSAGES: Final[dict[str, Entry]] = {
         "[remote] bootstrap failed: {command}\n{err}",
         "[remote] ошибка bootstrap: {command}\n{err}",
     ),
+    "EXEC_DEPLOY_LOCKED": Entry(
+        "deploy aborted: another deploy is already running on the server (lock held)",
+        "деплой прерван: на сервере уже идёт другой деплой (удерживается блокировка)",
+    ),
+    "EXEC_DEPLOY_NOFLOCK": Entry(
+        "deploy aborted: flock is missing on the server (util-linux required)",
+        "деплой прерван: на сервере нет flock (требуется util-linux)",
+    ),
+    "EXEC_DEPLOY_BUSY": Entry(
+        "deploy aborted: another xrayvpn deploy is running on this machine ({lock})",
+        "деплой прерван: на этой машине уже запущен другой деплой xrayvpn ({lock})",
+    ),
     "EXEC_EXTRACT_FAIL": Entry(
         "[remote] extract failed:\n{err}",
         "[remote] ошибка распаковки:\n{err}",

@@ -8,35 +8,44 @@ from xrayvpn.core.execution.base import DeployRequest
 from xrayvpn.core.execution.remote import (
     ANSIBLE_CORE_PIN,
     SERVER_COLLECTIONS,
-    SERVER_STAGING,
     SERVER_VENV,
     SWAPFILE,
     RemoteExecutor,
     bootstrap_commands,
     cleanup_commands,
+    fetch_dir,
     fetch_targets,
     playbook_command,
+    staging_dir,
     swap_guard_commands,
     swap_guard_needed,
     swap_status_commands,
 )
 from xrayvpn.core.transport.remote import CommandResult
 
+_LOCK_PREFIX = "exec 200>/run/lock/xrayvpn-deploy.lock; flock -n 200 || exit 75;"
+
 
 def test_bootstrap_commands_content() -> None:
-    commands = bootstrap_commands()
-    assert "python3 -V" in commands
+    staging = staging_dir("testrun")
+    commands = bootstrap_commands(staging)
+    assert commands[0].startswith("command -v flock")
+    assert all(c.startswith(_LOCK_PREFIX) for c in commands[1:])
+    assert any("python3 -V" in c for c in commands)
     assert any("python3 -m venv" in c and SERVER_VENV in c for c in commands)
     # bare Debian/Ubuntu lack python3-venv → the venv line must carry the apt fallback
     assert any("apt-get install -y python3-venv" in c for c in commands)
     assert any(f"ansible-core=={ANSIBLE_CORE_PIN}" in c for c in commands)
     assert any("community.general" in c and SERVER_COLLECTIONS in c for c in commands)
-    assert any(c.startswith(f"mkdir -p {SERVER_STAGING}") for c in commands)
+    assert any(c.endswith(f"mkdir -p {staging} {fetch_dir(staging)}") for c in commands)
+    assert any("xrayvpn-*" in c and "-mmin +1440" in c for c in commands)
 
 
 def test_playbook_command_build() -> None:
+    staging = staging_dir("testrun")
     request = DeployRequest(repo_root=Path("."), overrides={}, verbosity=3, dry_run=True)
-    command = playbook_command(request, {"warp_enabled": False, "xray_runtime": "native"})
+    command = playbook_command(request, {"warp_enabled": False, "xray_runtime": "native"}, staging)
+    assert command.startswith(f"{_LOCK_PREFIX} cd {staging}")
     assert f"ANSIBLE_COLLECTIONS_PATH={SERVER_COLLECTIONS}" in command
     assert f"{SERVER_VENV}/bin/ansible-playbook" in command
     assert "-i inventory.yml" in command
@@ -47,9 +56,10 @@ def test_playbook_command_build() -> None:
 
 
 def test_cleanup_commands_modes() -> None:
-    assert cleanup_commands("cleanup") == [f"rm -rf {SERVER_STAGING}"]
-    assert cleanup_commands("full-cleanup") == [f"rm -rf {SERVER_STAGING} {SERVER_VENV}"]
-    assert cleanup_commands("no-cleanup") == []
+    staging = staging_dir("testrun")
+    assert cleanup_commands("cleanup", staging) == [f"rm -rf {staging}"]
+    assert cleanup_commands("full-cleanup", staging) == [f"rm -rf {staging} {SERVER_VENV}"]
+    assert cleanup_commands("no-cleanup", staging) == []
 
 
 def test_fetch_targets_filters() -> None:
@@ -137,7 +147,7 @@ def test_deploy_orchestration(tmp_path: Path) -> None:
     assert "tar -xzf" in joined
     assert "chmod 0600" in joined
     assert "ansible-playbook" in joined
-    assert f"rm -rf {SERVER_STAGING}" in joined
+    assert any(c.startswith("rm -rf /tmp/xrayvpn-") for c in remote.commands)
     assert not any("SERVER_VENV" in c and "rm -rf" in c for c in remote.commands)
     # uploads: bundle + server inventory
     assert len(remote.puts) == 2
@@ -161,4 +171,4 @@ def test_deploy_playbook_failure_stops_flow(tmp_path: Path) -> None:
     request = DeployRequest(repo_root=_repo(tmp_path), overrides={})
     rc = executor.deploy(request, extra_vars={})
     assert rc == 4
-    assert not any("rm -rf" in c for c in remote.commands)
+    assert not any(c.startswith("rm -rf /tmp/xrayvpn-") for c in remote.commands)

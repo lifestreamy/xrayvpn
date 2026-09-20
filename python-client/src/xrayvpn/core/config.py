@@ -23,7 +23,6 @@ SERVER_VENV = "/opt/xrayvpn-venv"
 # SSH user cannot write /opt). The playbook itself runs with become anyway.
 SERVER_STAGING = "/tmp/xrayvpn"
 SERVER_COLLECTIONS = f"{SERVER_VENV}/collections"
-SERVER_FETCH_DIR = f"{SERVER_STAGING}/fetch"
 CONFIG_SOURCE = "/root/vpn-configs"
 
 SWAPFILE = "/swapfile"
