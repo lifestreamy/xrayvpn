@@ -1,12 +1,10 @@
 # Client status
 
-Which VPN clients I've tested with this setup and how they work. Honestly: what I use myself, what works but I don't recommend, and what I haven't tested at all.
-
-Legend:
+Which VPN clients I tested: what I use, what works but I don't recommend, and what I haven't tested.
 
 - ✅ green check — I use it myself / I recommend it.
-- ⚠️ yellow triangle — works, but has known issues. I don't recommend it.
-- — blue dash — not tested.
+- ⚠️ yellow triangle — works, but has issues. Not recommended.
+- — not tested.
 
 ## My experience with clients
 
@@ -27,6 +25,6 @@ Legend:
 
 ## Notes
 
-- **Clash Verge** — my main client on Windows 11. Import `clash_client_*.yaml` and it works.
+- **Clash Verge** — my main client on Windows 11. Import `clash_client_*.yaml`.
 - **FlClash** — my main client on Android. The same YAML config.
-- **Amnezia** — the first client this project generated configs for. It connects, but has known issues: on Windows split-tunnel can crash the network stack, on Android keepalive and background operation are unstable. Prefer Clash Verge or FlClash unless you specifically need Amnezia.
+- **Amnezia** — the first client this project generated configs for. It connects, but has issues: on Windows the split tunnel can take down the network stack; on Android keepalive and background work are unstable. Prefer Clash Verge or FlClash unless you specifically need Amnezia.

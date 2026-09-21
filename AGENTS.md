@@ -16,9 +16,9 @@ See `README.md` (RU) / `README.en.md` (EN) for the full description.
 - `docs/user/SETUP.md` — provisioning and initial deployment.
 - `docs/user/TEST-VPS.md` — validating a fresh VPS before running the playbook.
 - `docs/user/ROTATION.md` — credential/certificate rotation procedures.
-- `docs/user/CLIENT-STATUS.md` — current operational status of the deployed server.
-- `docs/dev/RELEASE.md` — release policy: versioning statuses, tagging, the release procedure.
-- `docs/dev/PLANNED.md` — planned roadmap and upcoming changes.
+- `docs/user/CLIENT-STATUS.md` — tested VPN clients.
+- `docs/dev/RELEASE.md` — release policy: versioning, tags, changelog.
+- `docs/user/PLANNED.md` — what is coming next (roadmap).
 - `docs/user/GLOSSARY.md` — domain-specific terms used in this project.
 
 ## Entry-point files

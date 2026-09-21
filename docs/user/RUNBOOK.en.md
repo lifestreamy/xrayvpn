@@ -11,7 +11,10 @@ The VPN fails in two ways: the service is down, or the outbound path has degrade
 | Service is `failed` | Xray exited; the reason is in the journal | `systemctl status xray` |
 | Logs empty after a reboot | journald without persistence (the role fixes this) | `ls /var/log/journal` |
 
-The error count is the main reading. Single digits are noise. Tens — that's the incident.
+Error counters are the main signal. Ones are noise; dozens are the failure.
+
+"another deploy is already running" is not an outage: a second concurrent client run is
+blocked by the server lock and the client mutex — wait for the first run to finish.
 
 ## Point restart of the service
 
@@ -46,7 +49,8 @@ Rebooting the host is the last resort. It resets everything the point restart wo
 - `journalctl -u xray` — the service life: starts, errors, the outbound failure stream.
 - `journalctl -t xray-obs -n 80` — the black box: every 10 minutes it records listeners, routes, firewall tail, memory and the WARP endpoint status. This is exactly what was missing after the reboot incident.
 - `journalctl -t xray-watchdog` — automatic restarts and alerts. The watchdog restarts the service at most 3 times per hour, then logs `[ALERT]` and waits for a human. An alert means: work through the steps above by hand.
-- Without SSH, from your own machine: `xrayvpn service status`, `xrayvpn service restart`, `xrayvpn service logs` (dumps the journal to a file).
+- Without SSH, from your own machine: `xrayvpn service status`, `xrayvpn service restart`, `xrayvpn service logs` (dumps the journal to a file; the window is `--since`/`--lines`,
+  Ctrl+C keeps the already-downloaded part).
 
 ## The mechanics in two sentences
 

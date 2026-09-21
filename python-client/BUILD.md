@@ -56,7 +56,7 @@ XRAYVPN_UPDATE_CHECK=0 ./xrayvpn-… deploy --dry-run --no-interactive --host 12
 XRAYVPN_LANG=ru XRAYVPN_UPDATE_CHECK=0 ./xrayvpn-… --ru --help   # RU-вывод (страж l10n-патчей в freeze)
 XRAYVPN_REPL_SELFTEST=1 ./xrayvpn-… repl               # feeding stdin: help\nexit\n → rc 0
 # Windows: двойной клик по .exe = тот же entry с консолью (--windows-console-mode=force);
-# при фатальной ошибке — crash-net окно вместо молчаливого disappearance.
+# при фатальной ошибке окно остаётся с текстом до нажатия Enter.
 ```
 
 ## Known environment notes

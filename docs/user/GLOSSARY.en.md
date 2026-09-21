@@ -12,7 +12,7 @@ A runtime-aware command used to invoke the Xray CLI / keygen. Set as a fact in `
 
 ## `xray_container_image`
 
-The container image for `docker`. The role computes it itself (pin or assembly from repository and version); how to set it and the current pin — the variables table in `docs/user/SETUP.en.md`.
+The container image for `docker`. The role computes it itself (pin or assembly from repository and version); how to set it and the current pin — the variables table in `config/README.en.md`.
 
 ## Rotation
 
@@ -64,6 +64,21 @@ The file `/root/xray-config/reality-state.json` (mode `0600`). Stores `private_k
 
 A placeholder. Your VPS IP address. Replace it before running commands from this guide.
 
+## Interactive mode
+
+`xrayvpn` with no arguments (or `xrayvpn repl`): the same commands as the CLI without the prefix;
+`exit` returns to the shell. The earlier name was "REPL".
+
+## Portable build (standalone)
+
+A single executable from GitHub Releases with the roles and playbooks embedded; no Python and no
+repository clone needed.
+
+## Deployment staging directory
+
+`/tmp/xrayvpn-<run-id>` on the VPS: the unpacked repository, the temporary inventory, fetched
+configs. Leftovers are pruned by the next run; `--no-cleanup` keeps staging, `--full-cleanup` removes it together with the venv.
+
 ## Ansible / inventory
 
 Ansible is a configuration management tool. The project role (`roles/xray_vpn/`) is applied to the VPS via `deploy.yml`. The inventory file (`inventory.yml`) describes the host connection. Syntax — standard Ansible inventory.
@@ -74,4 +89,4 @@ Parameter in `config/settings.yml` (default `true`). The role does not install `
 
 ---
 
-All `config/settings.yml` parameters are described in `docs/user/SETUP.en.md`.
+All `config/settings.yml` parameters are described in `config/README.en.md`.

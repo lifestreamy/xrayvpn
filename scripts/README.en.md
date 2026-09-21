@@ -2,9 +2,9 @@
 
 > This is the English copy of [README.md](README.md); the Russian file is the base.
 
-Loose scripts for repository contributors and CI. Not part of the Python
-client product (`python-client/` holds the application) and not part of the
-user-facing shell clients (`shell-clients/`).
+Loose scripts for repository contributors and CI. Not the main xrayvpn app
+(that lives in `python-client/`) and not the user-facing shell clients
+(`shell-clients/`).
 
 | Directory | Purpose |
 |---|---|

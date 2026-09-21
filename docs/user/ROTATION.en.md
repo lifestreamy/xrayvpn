@@ -10,7 +10,7 @@ When it's done:
 
 - **Compromise.** You found out (or suspect) that the REALITY keys or short ID leaked. In this case rotation is a must. Don't put it off.
 - **Personal schedule.** You decided to rotate keys regularly — for example, once every 90 days, just in case.
-- **Test.** You want to make sure rotation actually works on your VPS — that backups are written, new configs are downloaded, clients reconnect. Then you run the procedure once "for practice" and restore the original keys afterwards (see §5 below).
+- **Test.** You want to make sure rotation actually works on your VPS — that backups are written, new configs are downloaded, clients reconnect. Then you run the procedure once "for practice" and restore the original keys afterwards (see §4 below).
 
 In all cases the algorithm is the same — section §2 below.
 
@@ -21,7 +21,7 @@ Briefly — the terms used in this file. All project terms — in [`docs/user/GL
 - **Rotation** — replacing credentials with new ones. Old credentials stop working.
 - **The `xray_reality_rotate` switch** — a parameter that makes the role regenerate keys, short IDs and client UUIDs.
 - **REALITY** — a stealth VPN technology in Xray that masks the server as a legitimate third-party site.
-- **WARP** — an extra outgoing tunnel through Cloudflare. Rotated with a separate procedure (see §4).
+- **WARP** — an extra outgoing tunnel through Cloudflare. Rotated with a separate procedure (see §3).
 - **`<VPS_IP>`** — your VPS IP address. Replace it before running commands.
 
 ## 1. How to control the rotation settings
@@ -32,7 +32,7 @@ Three scenarios:
 |---|---|---|
 | Changing `xray_reality_rotate` | `config/settings.yml` or `-e ...` | Full rotation of REALITY keys, short ID and client UUIDs. |
 | Changing `num_clients` | `config/settings.yml` | How many client configs to generate. Without `xray_reality_rotate: true` it acts as add/reduce. |
-| WARP rotation | `/root/xray-config/wgcf-account.toml`, `/root/xray-config/wgcf-profile.conf` — delete manually, then re-run | Rotates WARP credentials (if enabled). Independent of `xray_reality_rotate`. Details in §4. |
+| WARP rotation | `/root/xray-config/wgcf-account.toml`, `/root/xray-config/wgcf-profile.conf` — delete manually, then re-run | Rotates WARP credentials (if enabled). Independent of `xray_reality_rotate`. Details in §3. |
 
 ## 2. Rotating the REALITY identity
 
@@ -63,7 +63,7 @@ ansible-playbook -i inventory.yml deploy.yml -e xray_reality_rotate=true
 | `/etc/xray/config.json` | ❌ rebuilt from the saved state and parameters (keys unchanged) | ✅ rebuilt with new keys |
 | `/root/vpn-configs/*.json` and `*.yaml` (on the VPS) | ❌ overwritten based on the same state | ✅ overwritten with new UUIDs |
 | `downloaded-clients/` (locally) | ❌ same as the previous run | ✅ new configs with new UUIDs |
-| WARP credentials (`wgcf-account.toml`, `wgcf-profile.conf`) | ⚠️ rotated separately, see §4 below | ⚠️ rotated separately, see §4 below |
+| WARP credentials (`wgcf-account.toml`, `wgcf-profile.conf`) | ⚠️ rotated separately, see §3 below | ⚠️ rotated separately, see §3 below |
 
 ⚠️ — changed by a separate procedure, not by `xray_reality_rotate`.
 
@@ -99,7 +99,7 @@ ls -la /root/xray-config/reality-state.json*   # the backup and the new file sho
 - Load the new configs into your VPN clients: Clash Verge / FlClash / Amnezia.
 - Set `xray_reality_rotate` back to `false` in `config/settings.yml` if you want to keep the identity on the next runs.
 
-## 4. Rotating WARP credentials
+## 3. Rotating WARP credentials
 
 WARP credentials come from `wgcf` and are stored in two files on the VPS:
 
@@ -137,7 +137,7 @@ curl -4 https://ifconfig.io   # run on the client device, not on the VPS
 curl -4 https://cloudflare.com/cdn-cgi/trace   # alternative, look for colo= and ip=
 ```
 
-## 5. Recovery
+## 4. Recovery
 
 The role creates a timestamped backup before rotation. Typical recovery:
 

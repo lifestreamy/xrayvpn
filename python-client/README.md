@@ -3,13 +3,13 @@
 > English version: [README.en.md](README.en.md).
 
 Основной клиент `xrayvpn` (Python) — развертывание, обновление и ротация Xray-сервера.
-Одинаково на Windows, Linux и macOS; две схемы исполнения за одним CLI.
+Одинаково на Windows, Linux и macOS; удалённый и локальный режимы в одном CLI.
 
 ## Установка и запуск
 
 Самый простой вариант — готовая standalone-сборка без Python: скачайте файл своей платформы
-из [Releases](https://github.com/lifestreamy/xrayvpn/releases). Первый запуск и
-раскладка файлов — в [../docs/user/SETUP.md](../docs/user/SETUP.md), раздел «Standalone-приложение».
+из [Releases](https://github.com/lifestreamy/xrayvpn/releases/latest).
+Первый запуск — в [../docs/user/SETUP.md](../docs/user/SETUP.md), раздел «Первый запуск».
 Как собрать самому (Nuitka onefile, режим отладки, smoke) — [BUILD.md](BUILD.md).
 
 Для работы с исходниками в репозитории нужен [uv](https://docs.astral.sh/uv/) (или Python 3.12+):
@@ -32,9 +32,9 @@ uv run --project python-client xrayvpn --help
 
 На Windows можно вообще без флагов. Двойной клик по `xrayvpn-deploy.pyw` (английский интерфейс)
 или `xrayvpn-deploy-ru.pyw` (русский) открывает консоль и запускает интерактивный мастер деплоя.
-CLI спросит узел исполнения, хост VPS и SSH-аутентификацию, покажет план и дождётся явного
-согласия — молча не выполняется ничего. Окно держится открытым до Enter: ошибки и код возврата
-видны явно.
+CLI спросит узел исполнения, хост VPS и SSH-аутентификацию, покажет план и запросит
+подтверждение: без него ничего не выполняется. Окно остаётся открытым — ошибки и код возврата
+видны до нажатия Enter.
 
 Дефис в имени лаунчера обязателен: `xrayvpn.pyw` рядом с пакетом перехватывал бы
 `import xrayvpn` на Windows.
@@ -51,13 +51,15 @@ uv tool install --editable python-client
 репозитория: клиент ищет `deploy.yml` и `config/settings.yml` вверх от текущей директории.
 Удаление — `uv tool uninstall xrayvpn`.
 
-## Консольная сессия (REPL)
+## Интерактивный режим
 
-`xrayvpn` без аргументов (или `xrayvpn repl`) открывает консольную сессию: команды внутри —
+`xrayvpn` без аргументов (или `xrayvpn repl`) открывает интерактивный режим: команды внутри —
 с тем же синтаксисом, что CLI, без префикса. `deploy` спросит недостающее и покажет план как
 обычно; `help` перечисляет встроенное (`version`, `lang ru|en`, `exit`); `deploy --help` —
 полный список флагов развёртывания. Приветственная плашка перерисовывается при смене языка
 (`lang ru|en` или просто `ru`/`en`) и сразу показывает `service` — аварийные команды по SSH.
+Под ссылками — строка «прервалось — повтори деплой» со ссылкой на docs; во время прогона видно
+прогресс этапов `[1/7]…[7/7]`, в долгих фазах — счётчик секунд.
 Двойной клик по standalone-приложению и `.pyw`-обёртки —
 это тот же режим. На Windows с Windows Terminal как терминалом по умолчанию двойной клик по `.exe`
 открывает классическое окно conhost с иконкой приложения (перезапуск через `conhost.exe`); остаться
@@ -119,11 +121,15 @@ uv run --project python-client xrayvpn deploy --host 1.2.3.4 --dry-run
   (перекрывает host/key-флаги с предупреждением).
 - Подключение (цель-VPS, оба узла): `--host`/`-H`, `--user`/`-u` (default `root`), `--port`/`-p` (default 22),
   `--pkey FILE` (предпочтительно), `--pass TEXT` (пароль в открытом виде, хуже ключа; без него —
-  скрытый запрос).
+  скрытый запрос). `--user`/`--port` без явного значения не пинуются: для хоста из
+  `~/.ssh/config` работают user/port из конфига, для голого IP — `root:22`.
 - Результат: `--clients-dir PATH` — куда сохранить конфиги клиентов
-  (default `<repo>/downloaded-clients/`, забираются с сервера из `/root/vpn-configs`).
+  (default `<repo>/downloaded-clients/`, забираются с сервера из `/root/vpn-configs`);
+  `--no-config-download` — вообще не скачивать, оставить их на сервере.
 - Уборка на сервере (remote): по умолчанию staging-каталог удаляется, venv остаётся;
   `--full-cleanup` — снести и venv, `--no-cleanup` — оставить всё.
+- Windows и `--execution local`: `--wsl-distro` (дистрибутив WSL) и `--wsl-venv` (venv с
+  `ansible-playbook`, по умолчанию `~/xray-venv`).
 - Диагностика: `--dry-run` (узел local: ansible `--check`; узел remote: напечатанный план без подключения),
   `--debug` / `--verbose` (Ansible -vvv/-vvvv; вместе нельзя, как и `--pkey` с `--pass`).
 

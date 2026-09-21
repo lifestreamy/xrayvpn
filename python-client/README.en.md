@@ -3,14 +3,14 @@
 > This is the English copy of [README.md](README.md); the Russian file is the base.
 
 The primary `xrayvpn` client (Python) — deploy, update and rotate an Xray server.
-Works the same on Windows, Linux and macOS; two execution models behind one CLI.
+Works the same on Windows, Linux and macOS; remote and local modes in one CLI.
 
 ## Install and run
 
 The simplest option is the standalone binary with no Python: download the build for your
-platform from [Releases](https://github.com/lifestreamy/xrayvpn/releases)
-(first run and file layout — [../docs/user/SETUP.en.md](../docs/user/SETUP.en.md), "Standalone binary"
-section). To build the binary yourself (Nuitka onefile, debug mode, smoke) — [BUILD.en.md](BUILD.en.md).
+platform from [Releases](https://github.com/lifestreamy/xrayvpn/releases/latest). First run —
+[../docs/user/SETUP.en.md](../docs/user/SETUP.en.md), "First run" section. To build the binary
+yourself (Nuitka onefile, debug mode, smoke) — [BUILD.en.md](BUILD.en.md).
 
 Working with the sources in the repository requires [uv](https://docs.astral.sh/uv/) (or Python 3.12+):
 
@@ -32,9 +32,9 @@ Inside `python-client/` (after `uv sync`) both `uv run xrayvpn ...` and `python 
 
 On Windows you can skip flags entirely. Double-click `xrayvpn-deploy.pyw` (English UI) or
 `xrayvpn-deploy-ru.pyw` (Russian UI): a console opens and the interactive deploy wizard starts.
-The CLI asks for the execution node, the VPS host and SSH auth, prints a deploy plan and waits
-for an explicit yes — nothing runs silently. The window stays open until Enter, so failures show
-an explicit message and exit code.
+The CLI asks for the execution node, the VPS host and SSH auth, prints a deploy plan and asks
+for confirmation: nothing runs without it. The window stays open — failures and the exit code
+are visible until you press Enter.
 
 The hyphen in the launcher name is mandatory: `xrayvpn-deploy.pyw` cannot shadow
 `import xrayvpn`, while a plain `xrayvpn.pyw` next to the package would.
@@ -51,13 +51,13 @@ The install is editable — repository code changes apply immediately. Run it fr
 folder: the client locates `deploy.yml` and `config/settings.yml` by walking up from the current
 directory. Remove with `uv tool uninstall xrayvpn`.
 
-## Console session (REPL)
+## Interactive mode
 
-`xrayvpn` with no arguments (or `xrayvpn repl`) opens a console session: commands use the exact
+`xrayvpn` with no arguments (or `xrayvpn repl`) opens the interactive mode: commands use the exact
 CLI syntax without the prefix. `deploy` still asks for the missing pieces and confirms the plan;
 `help` lists the built-ins (`version`, `lang ru|en`, `exit`); `deploy --help` shows every flag of
 the deploy command. The welcome banner is reprinted whenever the language switches
-(`lang ru|en` or just `ru`/`en`) and already shows `service` — the SSH recovery commands.
+(`lang ru|en` or just `ru`/`en`) and already shows `service` — the SSH recovery commands. The banner carries a "interrupted — rerun deploy" line with a docs link; a run shows stage progress `[1/7]…[7/7]`, counting seconds on the long stages.
 Double-clicking the binary and the `.pyw` launchers are this very mode. On Windows with
 Windows Terminal as the default terminal, double-clicking the `.exe` opens a classic conhost window
 with the app icon (a `conhost.exe` relaunch); to stay in a Windows Terminal tab, use the `--wt`
@@ -115,13 +115,17 @@ uv run --project python-client xrayvpn deploy --host 1.2.3.4 --dry-run
   (by default `.xrayvpn-inventory.yml` is generated from flags/inventory.yml, 0600, removed after the run);
   `--use-inventory` — reads connection vars from the personal `inventory.yml` in both nodes
   (overrides the host/key flags with a warning).
-- Connection (the VPS target, both nodes): `--host`/`-H`, `--user`/`-u` (default `root`), `--port`/`-p` (default 22),
+- Connection (the VPS target, both nodes): `--host`/`-H`, `--user`/`-u`, `--port`/`-p`,
   `--pkey FILE` (preferred), `--pass TEXT` (plain password, worse than a key; omit both and
-  it prompts, hidden).
+  it prompts, hidden). Left alone, `--user`/`--port` are not pinned: a `~/.ssh/config` host
+  keeps its user and port, a bare IP falls back to `root:22`.
 - Output: `--clients-dir PATH` — where client configs are saved
-  (default `<repo>/downloaded-clients/`, fetched from the server's `/root/vpn-configs`).
+  (default `<repo>/downloaded-clients/`, fetched from the server's `/root/vpn-configs`);
+  `--no-config-download` skips fetching and leaves them on the server.
 - Server-side cleanup (remote): by default the staging dir is removed, the venv stays;
   `--full-cleanup` removes the venv too, `--no-cleanup` leaves everything.
+- Windows and `--execution local`: `--wsl-distro` (the WSL distro) and `--wsl-venv` (a venv holding
+  `ansible-playbook`, default `~/xray-venv`).
 - Diagnostics: `--dry-run` (local node: ansible `--check`; remote node: printed plan without connecting),
   `--debug` / `--verbose` (Ansible -vvv/-vvvv; mutually exclusive, as are `--pkey` with `--pass`).
 

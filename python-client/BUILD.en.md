@@ -56,7 +56,7 @@ XRAYVPN_UPDATE_CHECK=0 ./xrayvpn-… deploy --dry-run --no-interactive --host 12
 XRAYVPN_LANG=ru XRAYVPN_UPDATE_CHECK=0 ./xrayvpn-… --ru --help   # RU output (l10n-patch sentinel in freeze)
 XRAYVPN_REPL_SELFTEST=1 ./xrayvpn-… repl               # stdin feeding: help\nexit\n → rc 0
 # Windows: double-click on the .exe = same entry with a console (--windows-console-mode=force);
-# fatal errors show the crash-net window instead of vanishing silently.
+# on a fatal error the window stays open with the message until you press Enter.
 ```
 
 ## Known environment notes
