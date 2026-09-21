@@ -1,62 +1,47 @@
 # Checking a VPS before paying
 
-I'm lucky with servers, but you might not be. So to avoid overpaying for a server that later turns out unsuitable for a VPN deployment, check the points from the checklist below in the cheapest test mode.
+I've been lucky with servers — you might not be. Before paying for a VPS long-term, take the
+cheapest test plan and run through the short checklist below. The point: make sure the server
+answers you — pings pass, ports are open, DNS works, and TLS to the sites you need isn't cut.
 
-In other words, before deploying it's better to make sure the server suits you: pings pass, ports are open, DNS works, and the sites you need aren't blocked by SNI.
+## What to check
 
-## What to check on the VPS
+- **ICMP** — basic connectivity: under 100 ms ping from your region.
+- **TCP 443** — the port must be reachable: that's where REALITY will listen.
+- **DNS** — resolving common domains (`google.com`, `youtube.com`, `github.com`).
+- **SNI censorship** — REALITY disguises itself as a legitimate site; if a censor drops TLS
+  handshakes to popular domains by SNI, REALITY will work badly. This is the hard part to test.
 
-- **ICMP** — basic connectivity. Ping < 100 ms from your region.
-- **TCP 443** — the port must be open. REALITY requires the client to reach your server on this port.
-- **DNS** — resolution of popular domains (`google.com`, `youtube.com`, `github.com`).
-- **SNI censorship** — REALITY masks itself as a legitimate site. If some censor cuts TLS handshakes by SNI to popular domains, REALITY may work poorly. This is harder to check without specialized scripts.
+## What must be OK before you pay
 
-## Ready-made tools
-
-Below are external projects that I don't bundle into the repository. Download and run them separately.
-
-### `AiCarrox/carrox-vps-check`
-
-A single bash script, ~5 minutes for a full run. Covers 14 items: virtualization, network, IP, disk, routing, streaming unlocks.
-
-GitHub: https://github.com/AiCarrox/carrox-vps-check
-
-Good for an overall VPS check.
-
-### `dy0422/ipcheck-plus`
-
-IP quality + streaming and AI-service unlocks. Useful if you want to know how the VPS looks to external services.
-
-GitHub: https://github.com/dy0422/ipcheck-plus
-
-## What should be OK before paying
-
-- Ping to the VPS < 100 ms (or whatever is typical in your region).
+- Ping to the VPS < 100 ms (or whatever is normal for your region).
 - TCP 443 open.
-- DNS works (for example, `dig google.com @8.8.8.8` via the VPS).
-- No DPI on SNI to popular domains (critical for REALITY).
+- DNS works (e.g. `dig google.com @8.8.8.8` from the VPS).
+- No SNI blocking to popular domains — critical for REALITY.
 
-## Manual commands
+## Commands
 
-If you don't want to run automatic scripts, here's the minimal check:
+SSH into the VPS after buying the test plan and run:
 
 ```bash
-ping -c 4 <VPS_IP>                  # basic connectivity
-nc -zv <VPS_IP> 443                # TLS/HTTPS port (REALITY will listen here)
-curl -4 https://ifconfig.io        # after VPN deployment — the client's external IP
+ping -c 4 <VPS_IP>                  # basic connectivity (from your machine)
+nc -zv <VPS_IP> 443                 # the TLS/HTTPS port (listen on VPS, probe from your side)
+curl -4 https://ifconfig.io         # after deployment and the client — the egress IP
 ```
 
-Expected command results (approximate):
+Expected:
 
-- `ping` — 4 packets sent and received, `0% packet loss`, response time in milliseconds (for example, `time=25.3 ms`). If there are losses or the time is above 150 ms, the server is far away or overloaded.
-- `nc -zv <VPS_IP> 443` — `succeeded!` — the port is open. `Connection refused` — the port is closed or nothing listens, deal with it before paying.
-- `curl -4 https://ifconfig.io` — shows the external IP:
-  - VPN off — your provider's IP;
-  - VPN on without WARP — your VPS IP;
-  - VPN on with WARP — the Cloudflare IP.
+- `ping` — 4 packets sent, 4 received, `0% packet loss`, time in milliseconds (e.g.
+  `time=25.3 ms`). Any loss or > 150 ms — the server is far or overloaded.
+- `nc -zv <VPS_IP> 443` — `succeeded!`; `Connection refused` — the port is closed or nothing
+  listens, sort it out before paying.
+- `curl -4 https://ifconfig.io` — before VPN it shows the data-center IP; through the client
+  without WARP — your VPS IP; with WARP — a Cloudflare IP.
 
-The first two are before deployment. The third — after connecting through a VPN client.
+The first two checks run before deployment, the last one after.
 
 ## Warning
 
-A manual check doesn't cover specialized DPI systems. If you know censorship is strict in your region, use `carrox-vps-check` or a similar script before a long-term purchase. There aren't many such tools, and they go stale faster than filtering systems update.
+The manual set does not catch subtle DPI systems — they can cut SNI selectively, and simple
+commands won't reveal it. In a heavily censored region, treat this as a real risk: only actual
+traffic after payment tests it fully.
