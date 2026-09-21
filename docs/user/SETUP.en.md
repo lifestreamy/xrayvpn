@@ -1,14 +1,10 @@
-> **Document:** `docs/SETUP.en.md` · **Location:** `docs/` · **Version:** v0.4.2 · **Last updated:** 2026-09-13
->
-> [Main README](../README.en.md) — project overview and quick start
-
 # SETUP — configuration and operation
 
 Below are the variables and steps that actually affect server behavior. I've deployed it more than once, everything is verified.
 
 How to prepare a VPS and a local machine; what variables exist and how they affect behavior; how to check that everything works after deployment.
 
-The full glossary is in [`docs/GLOSSARY.en.md`](GLOSSARY.en.md).
+The full glossary is in [`docs/user/GLOSSARY.en.md`](GLOSSARY.en.md).
 
 ## Configuration files
 
@@ -43,7 +39,7 @@ Which parameters can be passed as CLI flags — connection (`--host`, `-u`, `-p`
 | `warp_wgcf_version` | wgcf version (`2.2.22`). |
 | `warp_wgcf_url` | URL for downloading wgcf. |
 | `xray_backup_enabled` | Timestamped backups before overwriting (`true`). |
-| `xray_reality_rotate` | Full REALITY rotation. Default `false`. Details — in [`docs/ROTATION.en.md`](ROTATION.en.md). |
+| `xray_reality_rotate` | Full REALITY rotation. Default `false`. Details — in [`docs/user/ROTATION.en.md`](ROTATION.en.md). |
 | `xray_log_level` | Xray verbosity inside journald (`warning`). |
 | `xray_log_access` | Xray per-connection access log. Default `false`. |
 | `xray_journal_max_use` | Disk cap for the whole host journal, not only Xray (`120M`). |
@@ -95,7 +91,7 @@ uv run --project python-client xrayvpn deploy --execution remote --host 1.2.3.4 
 uv run --project python-client xrayvpn deploy --use-inventory --no-warp
 ```
 
-Want plain `xrayvpn` on PATH without the `uv run` prefix — `uv tool install --editable python-client` from the repository root (details in [python-client/README.en.md](../python-client/README.en.md)).
+Want plain `xrayvpn` on PATH without the `uv run` prefix — `uv tool install --editable python-client` from the repository root (details in [python-client/README.en.md](../../python-client/README.en.md)).
 
 In local mode the run uses a generated ssh-inventory `.xrayvpn-inventory.yml` (gitignored, mode 0600, removed after the run) holding the VPS parameters from flags/personal inventory plus passed overrides; everything else still comes from `config/settings.yml`. In remote mode the inventory is assembled on the server itself, and your personal `inventory.yml` is never uploaded.
 
@@ -110,7 +106,7 @@ The simplest way to use the tool is a single executable from [Releases](https://
 - On Windows with Windows Terminal as the default terminal, double-clicking the `.exe` opens a classic conhost window with the app icon (the client relaunches itself via `conhost.exe` — Windows Terminal has no per-app host choice and never shows the app's icon). To stay in a Windows Terminal tab: launch with the `--wt` flag (in any argument position) or set `XRAYVPN_IN_WT=1` — works through a shortcut too. The same relaunch applies to launching the executable directly in a WT tab (profile `commandline`); add `--wt` to the profile arguments or `XRAYVPN_IN_WT=1` to the profile environment to keep it in the tab.
 - Configuration files live next to the binary: `config/settings.yml` and `inventory.yml` (from the same-folder `inventory.yml.example`) behave exactly as in a clone.
 - Workspace resolution order (where the generated inventory, downloaded configs and staging are written): `XRAYVPN_HOME` → the binary's folder (if writable) → per-user state folder (Windows `%LOCALAPPDATA%\xrayvpn`, Linux `~/.local/share/xrayvpn`, macOS `~/Library/Application Support/xrayvpn`) → current folder. Do not put the binary into OneDrive/Google Drive or other synced folders — working files will fight the sync client.
-- When the VPN stops answering: `xrayvpn service status` / `restart` / `logs`; the full sequence — [`docs/RUNBOOK.en.md`](RUNBOOK.en.md).
+- When the VPN stops answering: `xrayvpn service status` / `restart` / `logs`; the full sequence — [`docs/user/RUNBOOK.en.md`](RUNBOOK.en.md).
 - Environment variables:
 
 | Variable | Meaning |
@@ -128,7 +124,7 @@ This is a utility that uses Ansible to deploy an Xray VLESS + REALITY VPN server
 
 **VPS:** fresh Ubuntu 20.04+ or Debian 11+, root or sudo, public IP.
 
-**Local machine:** on Windows — WSL2 with Ubuntu/Debian and PowerShell 5.1+. Before paying for a VPS long-term, check it — [`docs/TEST-VPS.en.md`](TEST-VPS.en.md). Platform requirements — in the README, the "Requirements" section.
+**Local machine:** on Windows — WSL2 with Ubuntu/Debian and PowerShell 5.1+. Before paying for a VPS long-term, check it — [`docs/user/TEST-VPS.en.md`](TEST-VPS.en.md). Platform requirements — in the README, the "Requirements" section.
 
 ## WARP in detail
 
@@ -138,7 +134,7 @@ This is a utility that uses Ansible to deploy an Xray VLESS + REALITY VPN server
 - **Endpoint:** `162.159.192.1:2408` (stable name — `engage.cloudflareclient.com:2408`); override in `config/settings.yml`.
 - **Credentials:** `wgcf` 2.2.22, the role downloads it itself; `wgcf-account.toml` and `wgcf-profile.conf` — in `/root/xray-config/`.
 
-Egress check — from outside the VPS, through a real VPN client: `curl -4 https://ifconfig.io` should return the Cloudflare IP. WARP rotation — in [`docs/ROTATION.en.md`](ROTATION.en.md), §4.
+Egress check — from outside the VPS, through a real VPN client: `curl -4 https://ifconfig.io` should return the Cloudflare IP. WARP rotation — in [`docs/user/ROTATION.en.md`](ROTATION.en.md), §4.
 
 ## Post-deployment checks
 
@@ -151,7 +147,7 @@ Then connect with at least one real client (Clash Verge / FlClash / Amnezia) and
 
 In the generated Clash/Mihomo profiles (Clash Verge, FlClash) the server IP is pinned by a DIRECT rule — traffic to the VPS itself must not go through the tunnel (anti-hairpin). If the server IP changes, regenerate the config instead of editing the rule by hand.
 
-If the VPN stops working — step-by-step diagnosis and recovery: [`docs/RUNBOOK.en.md`](RUNBOOK.en.md).
+If the VPN stops working — step-by-step diagnosis and recovery: [`docs/user/RUNBOOK.en.md`](RUNBOOK.en.md).
 
 ## Adding more clients without rotation
 
@@ -161,4 +157,4 @@ To add a new client config without touching existing keys — increase `num_clie
 
 AGPL-3.0 with an additional commercial-use restriction. Free for personal use and non-commercial distribution. Commercial use — only with the author's written permission: **tim.korelov@yandex.com**.
 
-Full text — in [`LICENSE`](../LICENSE) (English). A short summary in Russian — in [`LICENSE.ru.md`](../LICENSE.ru.md).
+Full text — in [`LICENSE`](../../LICENSE) (English). A short summary in Russian — in [`LICENSE.ru.md`](../../LICENSE.ru.md).

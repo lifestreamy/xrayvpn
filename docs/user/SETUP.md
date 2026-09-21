@@ -1,14 +1,10 @@
-> **Document:** `docs/SETUP.md` · **Location:** `docs/` · **Version:** v0.4.2 · **Last updated:** 2026-09-13
->
-> [Главный README](../README.md) — обзор проекта и быстрый старт
-
 # SETUP — настройка и эксплуатация
 
 Ниже — переменные и шаги, которые реально влияют на поведение сервера. Разворачивал не раз, всё проверено.
 
 Как подготовить VPS и локальную машину; какие переменные есть и как влияют на поведение; как проверить, что после развёртывания всё работает.
 
-Полный глоссарий терминов — в [`docs/GLOSSARY.md`](GLOSSARY.md).
+Полный глоссарий терминов — в [`docs/user/GLOSSARY.md`](GLOSSARY.md).
 
 ## Файлы конфигурации
 
@@ -43,7 +39,7 @@
 | `warp_wgcf_version` | Версия wgcf (`2.2.22`). |
 | `warp_wgcf_url` | URL для скачивания wgcf. |
 | `xray_backup_enabled` | Резервные копии с меткой времени перед перезаписью (`true`). |
-| `xray_reality_rotate` | Полная ротация REALITY. По умолчанию `false`. Подробности — в [`docs/ROTATION.md`](ROTATION.md). |
+| `xray_reality_rotate` | Полная ротация REALITY. По умолчанию `false`. Подробности — в [`docs/user/ROTATION.md`](ROTATION.md). |
 | `xray_log_level` | Уровень подробных логов Xray внутри journald (`warning`). |
 | `xray_log_access` | Access-лог Xray (пер-подключение). По умолчанию `false`. |
 | `xray_journal_max_use` | Диск-потолок всего journal хоста (`120M`), не только Xray. |
@@ -95,7 +91,7 @@ uv run --project python-client xrayvpn deploy --execution remote --host 1.2.3.4 
 uv run --project python-client xrayvpn deploy --use-inventory --no-warp
 ```
 
-Хотите голый `xrayvpn` в PATH без префикса `uv run` — `uv tool install --editable python-client` из корня репозитория (подробности — [python-client/README.md](../python-client/README.md)).
+Хотите голый `xrayvpn` в PATH без префикса `uv run` — `uv tool install --editable python-client` из корня репозитория (подробности — [python-client/README.md](../../python-client/README.md)).
 
 В режиме local для прогона генерируется ssh-inventory `.xrayvpn-inventory.yml` (gitignored, права 0600, удаляется после прогона) с параметрами VPS из флагов/личного inventory и переданными override'ами; остальное по-прежнему берётся из `config/settings.yml`. В режиме remote inventory собирается на самом сервере, а личный `inventory.yml` на него не загружается никогда.
 
@@ -110,7 +106,7 @@ uv run --project python-client xrayvpn deploy --use-inventory --no-warp
 - На Windows с Windows Terminal как терминалом по умолчанию двойной клик по `.exe` даёт классическое окно conhost с иконкой приложения (клиент перезапускает себя через `conhost.exe` — у Windows Terminal нет выбора хоста для отдельного приложения, и иконку приложения он не показывает). Чтобы остаться во вкладке Windows Terminal: флаг `--wt` (в любой позиции аргументов) или переменная `XRAYVPN_IN_WT=1` — работает и через ярлык. При «прямом» запуске исполняемого файла во вкладке WT (profile `commandline`) перезапуск в conhost тоже применяется; для закрепления во вкладке добавьте `--wt` в аргументы профиля или `XRAYVPN_IN_WT=1` в его переменные окружения.
 - Файлы конфигурации кладутся рядом с исполняемым файлом: `config/settings.yml` и `inventory.yml` (из `inventory.yml.example` рядом же) работают с той же семантикой, что в клоне.
 - Каталог рабочей области (куда пишутся временный inventory, скачанные конфиги, staging) определяется по порядку: `XRAYVPN_HOME` → папка с исполняемым файлом (если запись разрешена) → пользовательский каталог состояния (Windows `%LOCALAPPDATA%\xrayvpn`, Linux `~/.local/share/xrayvpn`, macOS `~/Library/Application Support/xrayvpn`) → текущая папка. Не помещайте standalone-приложение в OneDrive/Google Drive и прочие синхронизируемые папки: рабочие файлы будут конфликтовать с синхронизацией.
-- Если VPN перестал отвечать: `xrayvpn service status` / `restart` / `logs`, полный порядок действий — [`docs/RUNBOOK.md`](RUNBOOK.md).
+- Если VPN перестал отвечать: `xrayvpn service status` / `restart` / `logs`, полный порядок действий — [`docs/user/RUNBOOK.md`](RUNBOOK.md).
 - Переменные окружения:
 
 | Переменная | Действие |
@@ -128,7 +124,7 @@ uv run --project python-client xrayvpn deploy --use-inventory --no-warp
 
 **VPS:** свежий Ubuntu 20.04+ или Debian 11+, root или sudo, публичный IP.
 
-**Локальная машина:** на Windows — WSL2 с Ubuntu/Debian и PowerShell 5.1+. Перед оплатой VPS на длительный срок проверяйте его — [`docs/TEST-VPS.md`](TEST-VPS.md). Требования по платформам — в README, раздел «Требования».
+**Локальная машина:** на Windows — WSL2 с Ubuntu/Debian и PowerShell 5.1+. Перед оплатой VPS на длительный срок проверяйте его — [`docs/user/TEST-VPS.md`](TEST-VPS.md). Требования по платформам — в README, раздел «Требования».
 
 ## WARP подробно
 
@@ -138,7 +134,7 @@ uv run --project python-client xrayvpn deploy --use-inventory --no-warp
 - **Endpoint:** `162.159.192.1:2408` (стабильное имя — `engage.cloudflareclient.com:2408`); переопределяется в `config/settings.yml`.
 - **Учётные данные:** `wgcf` 2.2.22, роль скачивает его сама; `wgcf-account.toml` и `wgcf-profile.conf` — в `/root/xray-config/`.
 
-Проверка egress — снаружи VPS, через реальный VPN-клиент: `curl -4 https://ifconfig.io` должен вернуть IP Cloudflare. Ротация WARP — в [`docs/ROTATION.md`](ROTATION.md), §4.
+Проверка egress — снаружи VPS, через реальный VPN-клиент: `curl -4 https://ifconfig.io` должен вернуть IP Cloudflare. Ротация WARP — в [`docs/user/ROTATION.md`](ROTATION.md), §4.
 
 ## Проверка после развёртывания
 
@@ -151,7 +147,7 @@ nc -zv <VPS_IP> 443                           # порт слушает; <VPS_IP
 
 В генерируемых Clash/Mihomo-профилях (Clash Verge, FlClash) IP сервера закреплён правилом DIRECT: трафик к самому VPS не должен идти через туннель (анти-hairpin). Сменили IP сервера — перегенерируйте конфиг, а не правьте правило вручную.
 
-Если VPN перестал работать — диагностика и восстановление по шагам: [`docs/RUNBOOK.md`](RUNBOOK.md).
+Если VPN перестал работать — диагностика и восстановление по шагам: [`docs/user/RUNBOOK.md`](RUNBOOK.md).
 
 ## Как добавить ещё клиентов без ротации
 
@@ -161,4 +157,4 @@ nc -zv <VPS_IP> 443                           # порт слушает; <VPS_IP
 
 AGPL-3.0 с дополнительным ограничением коммерческого использования. Свободно для личного использования и некоммерческого распространения. Коммерческое использование — только с моего письменного разрешения: **tim.korelov@yandex.com**.
 
-Полный текст — в [`LICENSE`](../LICENSE) (English). Краткое описание на русском — в [`LICENSE.ru.md`](../LICENSE.ru.md).
+Полный текст — в [`LICENSE`](../../LICENSE) (English). Краткое описание на русском — в [`LICENSE.ru.md`](../../LICENSE.ru.md).

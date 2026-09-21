@@ -12,4 +12,4 @@ user-facing shell clients (`shell-clients/`).
 | `test/` | local verification runs (`local_test.py`) |
 
 Both scripts are plain Python 3 (stdlib only) and are idempotent. They run
-against the test venv in WSL (`~/xray-venv`, see [`docs/TEST-LOCAL.md`](../docs/TEST-LOCAL.md)).
+against the test venv in WSL (`~/xray-venv`, see [`docs/dev/TEST-LOCAL.md`](../docs/dev/TEST-LOCAL.md)).

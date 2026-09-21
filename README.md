@@ -1,5 +1,3 @@
-**Version:** v0.4.2 · **Last updated:** 2026-09-13
-
 [![English](https://img.shields.io/badge/English-808080?style=flat)](README.en.md)
 [![Русский](https://img.shields.io/badge/%D0%A0%D1%83%D1%81%D1%81%D0%BA%D0%B8%D0%B9-00a693?style=flat)](README.md)
 
@@ -52,13 +50,13 @@
 
 Проект не просто протестирован разово — я (и множество других людей) пользуюсь им постоянно, так как делал его в первую очередь для себя и под себя. Если что-то ломается — оно ломается и у меня, поэтому я быстро вношу правки.
 
-Но если я что-то упустил, у вас что-то сломалось, не запускается изначально или есть пожелания — создайте новый issue. Если перестал работать уже развёрнутый VPN — сначала пройдитесь по [`docs/RUNBOOK.md`](docs/RUNBOOK.md).
+Но если я что-то упустил, у вас что-то сломалось, не запускается изначально или есть пожелания — создайте новый issue. Если перестал работать уже развёрнутый VPN — сначала пройдитесь по [`docs/user/RUNBOOK.md`](docs/user/RUNBOOK.md).
 
 
 
 ## Быстрый старт
 
-Самый простой путь — standalone-приложение, без Python и Ansible: скачайте portable-сборку своей платформы (`xrayvpn-<версия>-windows-x64-portable.exe`, `xrayvpn-<версия>-linux-x64-portable`, `xrayvpn-<версия>-linux-arm64-portable`, `xrayvpn-<версия>-macos-arm64-portable`) из [раздела Releases](https://github.com/lifestreamy/xrayvpn/releases), положите в обычную папку (не в синхронизируемый диск) и запустите — на Windows просто двойным кликом. Откроется консольный помощник: достаточно набрать `deploy`, интерактивно спросится IP VPS и (скрыто) пароль; `ru` включает русский интерфейс. Файлы конфигурации (`config/settings.yml`, `inventory.yml`) можно положить рядом с исполняемым файлом — подробности в [`docs/SETUP.md`](docs/SETUP.md), раздел «Standalone-приложение».
+Самый простой путь — standalone-приложение, без Python и Ansible: скачайте portable-сборку своей платформы (`xrayvpn-<версия>-windows-x64-portable.exe`, `xrayvpn-<версия>-linux-x64-portable`, `xrayvpn-<версия>-linux-arm64-portable`, `xrayvpn-<версия>-macos-arm64-portable`) из [раздела Releases](https://github.com/lifestreamy/xrayvpn/releases), положите в обычную папку (не в синхронизируемый диск) и запустите — на Windows просто двойным кликом. Откроется консольный помощник: достаточно набрать `deploy`, интерактивно спросится IP VPS и (скрыто) пароль; `ru` включает русский интерфейс. Файлы конфигурации (`config/settings.yml`, `inventory.yml`) можно положить рядом с исполняемым файлом — подробности в [`docs/user/SETUP.md`](docs/user/SETUP.md), раздел «Standalone-приложение».
 
 Тем, кто работает с репозиторием, доступны три клиента и прямой запуск playbook. Параметры не обязательны: клиент можно запустить вообще без аргументов — `xrayvpn deploy` интерактивно спросит режим исполнения (по умолчанию `remote`) и IP VPS, затем скрыто запросит пароль. Минимальный случай — только IP VPS.
 
@@ -76,7 +74,7 @@
 - `inventory.yml` — подключение к VPS (создаётся из `inventory.yml.example`).
 - `config/settings.yml` — параметры сервера: `num_clients`, `warp_enabled`, `xray_port`, `reality_camouflage_domain` и другие.
 
-Подробнее про каждый файл — в [`docs/SETUP.md`](docs/SETUP.md), раздел «Файлы конфигурации».
+Подробнее про каждый файл — в [`docs/user/SETUP.md`](docs/user/SETUP.md), раздел «Файлы конфигурации».
 
 <details>
 <summary>xrayvpn (Python) — команды</summary>
@@ -100,7 +98,7 @@ uv run --project python-client xrayvpn deploy --execution remote --use-inventory
 <details>
 <summary>Bash — команды</summary>
 
-На Windows должен быть доступен WSL с созданным образом Ubuntu/Debian — как проверить и настроить, в [`docs/SETUP.md`](docs/SETUP.md). Если Ubuntu в WSL установлен, в меню «Пуск» будет видна иконка. Если вы уже на Linux, то вам вряд ли нужно объяснять, как пользоваться терминалом. На Windows — найдите в поиске (Win + S) powershell или terminal.
+На Windows должен быть доступен WSL с созданным образом Ubuntu/Debian — как проверить и настроить, в [`docs/user/SETUP.md`](docs/user/SETUP.md). Если Ubuntu в WSL установлен, в меню «Пуск» будет видна иконка. Если вы уже на Linux, то вам вряд ли нужно объяснять, как пользоваться терминалом. На Windows — найдите в поиске (Win + S) powershell или terminal.
 
 ```bash
 ./shell-clients/bash/provision-vpn.sh -H 1.2.3.4
@@ -146,7 +144,7 @@ ansible-playbook -i inventory.yml deploy.yml
 
 ## Для кого это
 
-Для тех, кто хочет свой VPN и не готов полагаться на чужие сервисы. Не важно, разбираетесь вы в Ansible, Xray, VPN, серверах или нет — скрипт сделает всё сам. Если захотите копнуть глубже, технические детали — в раскрывающихся блоках и в [`docs/`](docs/GLOSSARY.md).
+Для тех, кто хочет свой VPN и не готов полагаться на чужие сервисы. Не важно, разбираетесь вы в Ansible, Xray, VPN, серверах или нет — скрипт сделает всё сам. Если захотите копнуть глубже, технические детали — в раскрывающихся блоках и в [`docs/`](docs/user/GLOSSARY.md).
 
 ## Что делает и в чём смысл
 
@@ -166,7 +164,7 @@ flowchart LR
 
 Конечная цель — внешний сайт. Сайт видит IP вашего VPS (напрямую) или IP Cloudflare (через WARP).
 
-> В моих планах — мультиплатформенный клиент с простым интерфейсом, чтобы развёртывание и управление были ещё проще. Полный список планов — в [docs/PLANNED.md](docs/PLANNED.md).
+> В моих планах — мультиплатформенный клиент с простым интерфейсом, чтобы развёртывание и управление были ещё проще. Полный список планов — в [docs/dev/PLANNED.md](docs/dev/PLANNED.md).
 
 <details>
   <summary>Подробности для технарей</summary>
@@ -194,7 +192,7 @@ Xray VLESS + REALITY не требует своего домена и TLS-сер
 
 WARP outbound через Cloudflare включается одной строкой (`warp_enabled: true` в `config/settings.yml`). С ним сайты видят IP Cloudflare вместо IP вашего VPS.
 
-Перед оплатой VPS на длительный срок проверьте его через [`carrox-vps-check`](https://github.com/AiCarrox/carrox-vps-check) или похожий инструмент. Подробности — в [`docs/TEST-VPS.md`](docs/TEST-VPS.md).
+Перед оплатой VPS на длительный срок проверьте его через [`carrox-vps-check`](https://github.com/AiCarrox/carrox-vps-check) или похожий инструмент. Подробности — в [`docs/user/TEST-VPS.md`](docs/user/TEST-VPS.md).
 
 ## Где запускается
 
@@ -216,7 +214,7 @@ WARP outbound через Cloudflare включается одной строко
 Два способа:
 
 - **CLI-параметры** — `--pkey` или `--pass` (взаимоисключающие). Если ни один не задан — пароль спросит скрыто.
-- **Inventory-файл** — `inventory.yml` + `--use-inventory` (`-UseInventory` в PowerShell). Shell-клиенты умеют и произвольный путь: `--inventory PATH` (`-Inventory <path>`). Подробности режимов — в [`docs/SETUP.md`](docs/SETUP.md), раздел «CLI-флаги `xrayvpn deploy`».
+- **Inventory-файл** — `inventory.yml` + `--use-inventory` (`-UseInventory` в PowerShell). Shell-клиенты умеют и произвольный путь: `--inventory PATH` (`-Inventory <path>`). Подробности режимов — в [`docs/user/SETUP.md`](docs/user/SETUP.md), раздел «CLI-флаги `xrayvpn deploy`».
 
 Для режима `--use-inventory` нужен файл `inventory.yml` в корне проекта. В репозитории лежит шаблон `inventory.yml.example` — скопируйте его и заполните своими данными:
 
@@ -234,7 +232,7 @@ Copy-Item inventory.yml.example inventory.yml
 
 CLI-режим (`-H` без `--use-inventory`) файл `inventory.yml` не использует — скрипт сам соберёт нужный inventory во временной папке на время запуска.
 
-Это — способы передать параметры подключения. Остальная конфигурация (число клиентов, WARP, порт, домен маскировки) задаётся в `config/settings.yml` — подробнее в [`docs/SETUP.md`](docs/SETUP.md), раздел «Файлы конфигурации».
+Это — способы передать параметры подключения. Остальная конфигурация (число клиентов, WARP, порт, домен маскировки) задаётся в `config/settings.yml` — подробнее в [`docs/user/SETUP.md`](docs/user/SETUP.md), раздел «Файлы конфигурации».
 
 ## Структура репозитория
 
@@ -246,18 +244,18 @@ CLI-режим (`-H` без `--use-inventory`) файл `inventory.yml` не и�
 
 ## Клиенты
 
-Я пользуюсь Clash Verge (Windows) и FlClash (Android). Amnezia работает, но из-за нестабильности рекомендую Mihomo-клиенты. Таблица про то, что я проверил сам, а что нет — [`docs/CLIENT-STATUS.md`](docs/CLIENT-STATUS.md).
+Я пользуюсь Clash Verge (Windows) и FlClash (Android). Amnezia работает, но из-за нестабильности рекомендую Mihomo-клиенты. Таблица про то, что я проверил сам, а что нет — [`docs/user/CLIENT-STATUS.md`](docs/user/CLIENT-STATUS.md).
 
 ## Подробная документация
 
-- [`docs/SETUP.md`](docs/SETUP.md) — настройка, переменные `config/settings.yml`, WARP, проверка после развёртывания.
-- [`docs/RUNBOOK.md`](docs/RUNBOOK.md) — что делать, когда VPN перестал работать.
-- [`docs/ROTATION.md`](docs/ROTATION.md) — смена ключей и UUID клиентов.
-- [`docs/TEST-VPS.md`](docs/TEST-VPS.md) — проверка VPS перед оплатой.
-- [`docs/GLOSSARY.md`](docs/GLOSSARY.md) — термины проекта.
-- [`docs/CLIENT-STATUS.md`](docs/CLIENT-STATUS.md) — статус клиентов.
-- [`docs/PLANNED.md`](docs/PLANNED.md) — что запланировано дальше.
-- [`docs/RELEASE.md`](docs/RELEASE.md) — релизная политика и статусы релизов.
+- [`docs/user/SETUP.md`](docs/user/SETUP.md) — настройка, переменные `config/settings.yml`, WARP, проверка после развёртывания.
+- [`docs/user/RUNBOOK.md`](docs/user/RUNBOOK.md) — что делать, когда VPN перестал работать.
+- [`docs/user/ROTATION.md`](docs/user/ROTATION.md) — смена ключей и UUID клиентов.
+- [`docs/user/TEST-VPS.md`](docs/user/TEST-VPS.md) — проверка VPS перед оплатой.
+- [`docs/user/GLOSSARY.md`](docs/user/GLOSSARY.md) — термины проекта.
+- [`docs/user/CLIENT-STATUS.md`](docs/user/CLIENT-STATUS.md) — статус клиентов.
+- [`docs/dev/PLANNED.md`](docs/dev/PLANNED.md) — что запланировано дальше.
+- [`docs/dev/RELEASE.md`](docs/dev/RELEASE.md) — релизная политика и статусы релизов.
 - [`CHANGELOG.md`](CHANGELOG.md) — что менялось по версиям.
 
 ## Лицензия

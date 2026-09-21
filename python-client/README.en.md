@@ -9,7 +9,7 @@ Works the same on Windows, Linux and macOS; two execution models behind one CLI.
 
 The simplest option is the standalone binary with no Python: download the build for your
 platform from [Releases](https://github.com/lifestreamy/xrayvpn/releases)
-(first run and file layout — [../docs/SETUP.en.md](../docs/SETUP.en.md), "Standalone binary"
+(first run and file layout — [../docs/user/SETUP.en.md](../docs/user/SETUP.en.md), "Standalone binary"
 section). To build the binary yourself (Nuitka onefile, debug mode, smoke) — [BUILD.en.md](BUILD.en.md).
 
 Working with the sources in the repository requires [uv](https://docs.astral.sh/uv/) (or Python 3.12+):
@@ -135,7 +135,7 @@ listeners), `service restart` (restarts xray — WARP lives inside it), `service
 [--since 30m] [--lines N] [--out DIR]` (dumps the journal to your machine: a finite snapshot
 of the window, 30 minutes by default; Ctrl+C aborts the download and keeps the partial file),
 `service reboot --yes` (last resort, requires the explicit `--yes`). The recovery sequence —
-[`docs/RUNBOOK.en.md`](../docs/RUNBOOK.en.md).
+[`docs/user/RUNBOOK.en.md`](../docs/user/RUNBOOK.en.md).
 
 ## Layout
 
@@ -145,5 +145,5 @@ of the window, 30 minutes by default; Ctrl+C aborts the download and keeps the p
 - sibling repo zones: `shell-clients/` (Bash/PowerShell, maintained, not developed) and
   `scripts/` (contributor tooling).
 
-Server configuration — [../docs/SETUP.en.md](../docs/SETUP.en.md), key rotation —
-[../docs/ROTATION.en.md](../docs/ROTATION.en.md).
+Server configuration — [../docs/user/SETUP.en.md](../docs/user/SETUP.en.md), key rotation —
+[../docs/user/ROTATION.en.md](../docs/user/ROTATION.en.md).

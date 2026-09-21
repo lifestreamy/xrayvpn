@@ -1,7 +1,3 @@
-> **Document:** `docs/TEST-VPS.en.md` · **Location:** `docs/` · **Version:** v0.4.1 · **Last updated:** 2026-09-09
->
-> [Main README](../README.en.md) — project overview and quick start
-
 # Checking a VPS before paying
 
 I'm lucky with servers, but you might not be. So to avoid overpaying for a server that later turns out unsuitable for a VPN deployment, check the points from the checklist below in the cheapest test mode.

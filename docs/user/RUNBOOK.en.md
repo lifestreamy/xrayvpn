@@ -1,7 +1,3 @@
-> **Document:** `docs/RUNBOOK.en.md` · **Location:** `docs/` · **Version:** v0.4.2 · **Last updated:** 2026-09-13
->
-> [Main README](../README.en.md) · [Server setup](SETUP.en.md)
-
 # RUNBOOK — recovering the VPN
 
 The VPN fails in two ways: the service is down, or the outbound path has degraded. The second one is the tricky case — the service reports `active`, clients look "connected", and there is no internet. This runbook exists mostly for it. Rebooting the OS is almost never the answer.

@@ -1,7 +1,3 @@
-> **Document:** `docs/RELEASE.en.md` · **Location:** `docs/` · **Version:** v0.4.1 · **Last updated:** 2026-09-14
->
-> [Main README](../README.en.md) — project overview and quick start
-
 # RELEASE — release policy
 
 How the project ships releases: versioning, statuses and the check sequence before a release. The policy applies starting with v0.3.
@@ -33,7 +29,7 @@ Statuses — an explicit list:
 
 1. A green full CI run on the release commit: distro matrix ubuntu 22.04 / 24.04 + debian 12, the firewall job, CLI tests and lint.
 2. CI covers the client scenarios as fully as possible: the python client + the bash and PowerShell wrappers × ubuntu / windows / macos runners; missing coverage is built before the release.
-3. The maintainer has manually clicked through every usage scenario on a real VPS following the testing cheatsheets (`docs/TEST-LOCAL.en.md`, `docs/TEST-VPS.en.md`): deploy in two ways, rotation, client usability (responsiveness, translations, text clarity), real VPN traffic.
+3. The maintainer has manually clicked through every usage scenario on a real VPS following the testing cheatsheets (`docs/dev/TEST-LOCAL.en.md`, `docs/user/TEST-VPS.en.md`): deploy in two ways, rotation, client usability (responsiveness, translations, text clarity), real VPN traffic.
 4. No known open regressions or hotfixes at the moment of the release.
 
 A calendar soak period is not a criterion (decision 2026-09-09): a deploy either fails immediately or works; the main risk lives in the deployment process and config generation, which the checks above cover.
@@ -44,7 +40,7 @@ One release per version — after the whole planned version scope is done; no in
 
 1. The version scope (work waves) is complete in `staging`; each wave is pushed and verified by a green CI run before the next one starts.
 2. `staging` is pushed manually; a green full GitHub Actions run is awaited on the head commit: workflow `molecule` (syntax, distro matrix, firewall job), workflow `python-client` (CLI tests and lint) and — on the PR into main — the smoke binary build of workflow `release-binaries` (path-filtered). On failures — fix in separate commits and re-run until green.
-3. One `docs: finalize vX.Y.Z` commit: `docs/PLANNED.*`, both CHANGELOG halves, `Version` / `Last updated` stamps of the public docs, the README summary, the statuses table row below and the python-client package version bump (`pyproject.toml`, `src/xrayvpn/__init__.py`, `uv.lock`) to the release version.
+3. One `docs: finalize vX.Y.Z` commit: `docs/dev/PLANNED.*`, both CHANGELOG halves, `Version` / `Last updated` stamps of the public docs, the README summary, the statuses table row below and the python-client package version bump (`pyproject.toml`, `src/xrayvpn/__init__.py`, `uv.lock`) to the release version.
 4. The maintainer performs a successful manual deployment of the release content on a real VPS — the release is published only after that.
 5. The PR from `staging` into `main` is merged with **Create a merge commit** (web rebase is prohibited — it recreates commits and strips signatures and dates).
 6. The signed annotated tag `vX.Y.Z` is created on the merge node and pushed (by hand). Pushing the tag launches the build workflow: it builds the four platform binaries and dists, computes `SHA256SUMS.txt` and — for plain tags only — `latest.json`, and creates the GitHub release as a draft — the assets never block the tag: if the build leg fails, the release can still be published without them and the assets rebuilt later by rerunning the workflow on the tag.
@@ -70,6 +66,6 @@ Note (2026-09-12): v0.4.0 was never released — its scope and the work after it
 
 ## Release commit
 
-Its rules reduce to step 3 of the release sequence: `docs/PLANNED.*` (the "what is next" overview rewritten for the new version), public doc stamps, the README summary, both CHANGELOG halves. This document (`docs/RELEASE.en.md`), until a release ships, is edited by regular commits.
+Its rules reduce to step 3 of the release sequence: `docs/dev/PLANNED.*` (the "what is next" overview rewritten for the new version), public doc stamps, the README summary, both CHANGELOG halves. This document (`docs/dev/RELEASE.en.md`), until a release ships, is edited by regular commits.
 
 The python-client package version always equals the release version: the finalize commit bumps `pyproject.toml` and `src/xrayvpn/__init__.py` (and refreshes `uv.lock`) to `vX.Y.Z`; `xrayvpn --version` must match the tag. The `tests/test_smoke.py` suite catches a desync.

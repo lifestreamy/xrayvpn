@@ -13,13 +13,13 @@ See `README.md` (RU) / `README.en.md` (EN) for the full description.
 
 - `README.md` or `README.en.md` — project overview, motivation, scope, contents.
 - `LICENSE` / `LICENSE.ru.md` — licensing terms (read before touching the code).
-- `docs/SETUP.md` — provisioning and initial deployment.
-- `docs/TEST-VPS.md` — validating a fresh VPS before running the playbook.
-- `docs/ROTATION.md` — credential/certificate rotation procedures.
-- `docs/CLIENT-STATUS.md` — current operational status of the deployed server.
-- `docs/RELEASE.md` — release policy: versioning statuses, tagging, the release procedure.
-- `docs/PLANNED.md` — planned roadmap and upcoming changes.
-- `docs/GLOSSARY.md` — domain-specific terms used in this project.
+- `docs/user/SETUP.md` — provisioning and initial deployment.
+- `docs/user/TEST-VPS.md` — validating a fresh VPS before running the playbook.
+- `docs/user/ROTATION.md` — credential/certificate rotation procedures.
+- `docs/user/CLIENT-STATUS.md` — current operational status of the deployed server.
+- `docs/dev/RELEASE.md` — release policy: versioning statuses, tagging, the release procedure.
+- `docs/dev/PLANNED.md` — planned roadmap and upcoming changes.
+- `docs/user/GLOSSARY.md` — domain-specific terms used in this project.
 
 ## Entry-point files
 

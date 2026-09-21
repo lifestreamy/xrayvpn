@@ -1,7 +1,3 @@
-> **Document:** `docs/GLOSSARY.en.md` · **Location:** `docs/` · **Version:** v0.4.1 · **Last updated:** 2026-09-09
->
-> [Main README](../README.en.md) — project overview and quick start
-
 # Glossary
 
 Project terms. If you meet an unfamiliar word in the documentation, look it up here.
@@ -16,11 +12,11 @@ A runtime-aware command used to invoke the Xray CLI / keygen. Set as a fact in `
 
 ## `xray_container_image`
 
-The container image for `docker`. The role computes it itself (pin or assembly from repository and version); how to set it and the current pin — the variables table in `docs/SETUP.en.md`.
+The container image for `docker`. The role computes it itself (pin or assembly from repository and version); how to set it and the current pin — the variables table in `docs/user/SETUP.en.md`.
 
 ## Rotation
 
-Replacing credentials with new ones. After rotation, old client configs stop connecting — you need to distribute new ones. Details — in `docs/ROTATION.en.md`.
+Replacing credentials with new ones. After rotation, old client configs stop connecting — you need to distribute new ones. Details — in `docs/user/ROTATION.en.md`.
 
 ## The `xray_reality_rotate` switch
 
@@ -78,4 +74,4 @@ Parameter in `config/settings.yml` (default `true`). The role does not install `
 
 ---
 
-All `config/settings.yml` parameters are described in `docs/SETUP.en.md`.
+All `config/settings.yml` parameters are described in `docs/user/SETUP.en.md`.

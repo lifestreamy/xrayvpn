@@ -1,7 +1,7 @@
 # Changelog
 
 Version history. Русская версия: [CHANGELOG.md](CHANGELOG.md).
-Release policy and release statuses — [docs/RELEASE.en.md](docs/RELEASE.en.md).
+Release policy and release statuses — [docs/dev/RELEASE.en.md](docs/dev/RELEASE.en.md).
 
 Format:
 
@@ -76,7 +76,7 @@ no v0.4.0 release.
 
 ## v0.3 — 2026-09-05
 
-Status: experimental (promotion criteria — `docs/RELEASE.en.md`).
+Status: experimental (promotion criteria — `docs/dev/RELEASE.en.md`).
 
 ### Added
 - The primary CLI client `xrayvpn` (Python): remote mode over SSH and a local mode, common
@@ -84,8 +84,8 @@ Status: experimental (promotion criteria — `docs/RELEASE.en.md`).
 - GitHub Actions CI: `molecule` workflow — syntax check, molecule matrix on ubuntu 22.04/24.04 and
   debian 12, a full host run with the firewall and a mihomo-client e2e; `python-client` workflow —
   CLI tests and lint.
-- Manual check runbook — `docs/TEST-LOCAL.en.md`.
-- Release policy — `docs/RELEASE.en.md`: experimental/stable statuses, tag scheme, release
+- Manual check runbook — `docs/dev/TEST-LOCAL.en.md`.
+- Release policy — `docs/dev/RELEASE.en.md`: experimental/stable statuses, tag scheme, release
   sequence. The CHANGELOG pair (this file plus `CHANGELOG.md`).
 - Hints for clients when `inventory.yml` is missing or incomplete.
 - Enabling `xray.service` at boot and auto-install of `ufw` / `python3-venv` during deploy.

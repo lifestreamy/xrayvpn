@@ -1,7 +1,3 @@
-> **Document:** `docs/ROTATION.en.md` · **Location:** `docs/` · **Version:** v0.4.1 · **Last updated:** 2026-09-09
->
-> [Main README](../README.en.md) — project overview and quick start
-
 # Rotation — Runbook
 
 I wrote this runbook as a reminder after having to rotate keys on my own VPS. If something doesn't match the real behavior — open an issue and I'll fix it. The guide applies when your VPS has already been deployed with this utility. If it was deployed with another utility, proper operation isn't guaranteed — it's better to remove the old deployment first and redeploy with this one.
@@ -20,7 +16,7 @@ In all cases the algorithm is the same — section §2 below.
 
 ## Glossary
 
-Briefly — the terms used in this file. All project terms — in [`docs/GLOSSARY.en.md`](GLOSSARY.en.md).
+Briefly — the terms used in this file. All project terms — in [`docs/user/GLOSSARY.en.md`](GLOSSARY.en.md).
 
 - **Rotation** — replacing credentials with new ones. Old credentials stop working.
 - **The `xray_reality_rotate` switch** — a parameter that makes the role regenerate keys, short IDs and client UUIDs.

@@ -1,7 +1,3 @@
-> **Document:** `docs/CLIENT-STATUS.en.md` · **Location:** `docs/` · **Version:** v0.4.1 · **Last updated:** 2026-09-09
->
-> [Main README](../README.en.md) — project overview and quick start
-
 # Client status
 
 Which VPN clients I've tested with this setup and how they work. Honestly: what I use myself, what works but I don't recommend, and what I haven't tested at all.

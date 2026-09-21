@@ -1,5 +1,3 @@
-**Version:** v0.4.2 · **Last updated:** 2026-09-13
-
 [![Русский](https://img.shields.io/badge/%D0%A0%D1%83%D1%81%D1%81%D0%BA%D0%B8%D0%B9-808080?style=flat)](README.md)
 [![English](https://img.shields.io/badge/English-00a693?style=flat)](README.en.md)
 
@@ -52,13 +50,13 @@ I went with Ansible — more on why below.
 
 This project isn't a one-time test — I (and many other people) use it constantly, because I built it first and foremost for myself. If something breaks, it breaks for me too, so I fix it quickly.
 
-But if I missed something, something broke for you, it doesn't start at all, or you have suggestions — create a new issue. If an already-deployed VPN stopped working — start with [`docs/RUNBOOK.en.md`](docs/RUNBOOK.en.md).
+But if I missed something, something broke for you, it doesn't start at all, or you have suggestions — create a new issue. If an already-deployed VPN stopped working — start with [`docs/user/RUNBOOK.en.md`](docs/user/RUNBOOK.en.md).
 
 
 
 ## Quick start
 
-The simplest path is the standalone binary — no Python, no Ansible: download the portable build for your platform (`xrayvpn-<version>-windows-x64-portable.exe`, `xrayvpn-<version>-linux-x64-portable`, `xrayvpn-<version>-linux-arm64-portable`, `xrayvpn-<version>-macos-arm64-portable`) from the [Releases section](https://github.com/lifestreamy/xrayvpn/releases), put it in a regular folder (not a synced drive) and run it — on Windows just double-click. A console assistant opens: type `deploy`, it interactively asks for the VPS IP and (hidden) password; `ru` switches the interface to Russian. Configuration files (`config/settings.yml`, `inventory.yml`) may live next to the binary — see [`docs/SETUP.en.md`](docs/SETUP.en.md), the "Standalone binary" section.
+The simplest path is the standalone binary — no Python, no Ansible: download the portable build for your platform (`xrayvpn-<version>-windows-x64-portable.exe`, `xrayvpn-<version>-linux-x64-portable`, `xrayvpn-<version>-linux-arm64-portable`, `xrayvpn-<version>-macos-arm64-portable`) from the [Releases section](https://github.com/lifestreamy/xrayvpn/releases), put it in a regular folder (not a synced drive) and run it — on Windows just double-click. A console assistant opens: type `deploy`, it interactively asks for the VPS IP and (hidden) password; `ru` switches the interface to Russian. Configuration files (`config/settings.yml`, `inventory.yml`) may live next to the binary — see [`docs/user/SETUP.en.md`](docs/user/SETUP.en.md), the "Standalone binary" section.
 
 For those who work with the repository there are three clients and a direct playbook run. Parameters are optional: the client can be run with no arguments at all — `xrayvpn deploy` interactively asks for the execution mode (default `remote`) and the VPS IP, then requests the password with hidden input. The minimal case — just the VPS IP.
 
@@ -76,7 +74,7 @@ IP and password are enough — everything else configures itself. If you need to
 - `inventory.yml` — VPS connection (created from `inventory.yml.example`).
 - `config/settings.yml` — server parameters: `num_clients`, `warp_enabled`, `xray_port`, `reality_camouflage_domain` and others.
 
-More about each file — in [`docs/SETUP.en.md`](docs/SETUP.en.md), the "Configuration files" section.
+More about each file — in [`docs/user/SETUP.en.md`](docs/user/SETUP.en.md), the "Configuration files" section.
 
 <details>
 <summary>xrayvpn (Python) — commands</summary>
@@ -100,7 +98,7 @@ The rest (`--pkey`, ansible node `--execution local|remote`, the deploy-plan con
 <details>
 <summary>Bash — commands</summary>
 
-On Windows, WSL with an Ubuntu/Debian image must be available — how to check and set it up, see [`docs/SETUP.en.md`](docs/SETUP.en.md). If Ubuntu is installed in WSL, you'll see the icon in the Start menu. If you're already on Linux, you hardly need an explanation of how to use a terminal. On Windows — find powershell or terminal via search (Win + S).
+On Windows, WSL with an Ubuntu/Debian image must be available — how to check and set it up, see [`docs/user/SETUP.en.md`](docs/user/SETUP.en.md). If Ubuntu is installed in WSL, you'll see the icon in the Start menu. If you're already on Linux, you hardly need an explanation of how to use a terminal. On Windows — find powershell or terminal via search (Win + S).
 
 ```bash
 ./shell-clients/bash/provision-vpn.sh -H 1.2.3.4
@@ -146,7 +144,7 @@ In this mode client configs are not downloaded — they stay on the VPS in `/roo
 
 ## Who this is for
 
-For those who want their own VPN and don't want to rely on third-party services. It doesn't matter whether you know Ansible, Xray, VPN or servers — the script does everything. If you want to dig deeper, technical details are in collapsible blocks and in [`docs/`](docs/GLOSSARY.en.md).
+For those who want their own VPN and don't want to rely on third-party services. It doesn't matter whether you know Ansible, Xray, VPN or servers — the script does everything. If you want to dig deeper, technical details are in collapsible blocks and in [`docs/`](docs/user/GLOSSARY.en.md).
 
 ## What it does
 
@@ -166,7 +164,7 @@ flowchart LR
 
 The end goal is the external website. It sees your VPS IP (direct) or Cloudflare IP (via WARP).
 
-> I'm planning my own cross-platform client with a simple interface to make deployment and management even easier. The full list of plans is in [docs/PLANNED.en.md](docs/PLANNED.en.md).
+> I'm planning my own cross-platform client with a simple interface to make deployment and management even easier. The full list of plans is in [docs/dev/PLANNED.en.md](docs/dev/PLANNED.en.md).
 
 <details>
   <summary>Tech stack details</summary>
@@ -194,7 +192,7 @@ Three things are needed from you:
 
 WARP outbound via Cloudflare is enabled with one line (`warp_enabled: true` in `config/settings.yml`). With it, sites see Cloudflare IP instead of your VPS IP.
 
-Before paying for a VPS long-term, check it with [`carrox-vps-check`](https://github.com/AiCarrox/carrox-vps-check) or a similar tool. Details — in [`docs/TEST-VPS.en.md`](docs/TEST-VPS.en.md).
+Before paying for a VPS long-term, check it with [`carrox-vps-check`](https://github.com/AiCarrox/carrox-vps-check) or a similar tool. Details — in [`docs/user/TEST-VPS.en.md`](docs/user/TEST-VPS.en.md).
 
 ## Where it runs
 
@@ -216,7 +214,7 @@ The wrapper installs Python 3, Ansible and `sshpass` itself if they are missing.
 Two ways:
 
 - **CLI parameters** — `--pkey` or `--pass` (mutually exclusive). If neither is set, the password is requested with hidden input.
-- **Inventory file** — `inventory.yml` + `--use-inventory` (`-UseInventory` in PowerShell). The shell clients also accept an explicit path: `--inventory PATH` (`-Inventory <path>`). Mode details — in [`docs/SETUP.en.md`](docs/SETUP.en.md), the "`xrayvpn deploy` CLI flags" section.
+- **Inventory file** — `inventory.yml` + `--use-inventory` (`-UseInventory` in PowerShell). The shell clients also accept an explicit path: `--inventory PATH` (`-Inventory <path>`). Mode details — in [`docs/user/SETUP.en.md`](docs/user/SETUP.en.md), the "`xrayvpn deploy` CLI flags" section.
 
 For `--use-inventory` mode you need an `inventory.yml` file in the project root. The repository has an `inventory.yml.example` template — copy it and fill in your data:
 
@@ -234,7 +232,7 @@ Fill in `ansible_host`, `ansible_user`, `ansible_port` and one of the two: `ansi
 
 CLI mode (`-H` without `--use-inventory`) doesn't use `inventory.yml` — the script builds its own inventory in a temp folder for the duration of the run.
 
-These are ways to pass connection parameters. The rest of the configuration (number of clients, WARP, port, camouflage domain) is set in `config/settings.yml` — more in [`docs/SETUP.en.md`](docs/SETUP.en.md), the "Configuration files" section.
+These are ways to pass connection parameters. The rest of the configuration (number of clients, WARP, port, camouflage domain) is set in `config/settings.yml` — more in [`docs/user/SETUP.en.md`](docs/user/SETUP.en.md), the "Configuration files" section.
 
 ## Repository layout
 
@@ -246,18 +244,18 @@ These are ways to pass connection parameters. The rest of the configuration (num
 
 ## Clients
 
-I use Clash Verge (Windows) and FlClash (Android). Amnezia works, but because of instability I recommend Mihomo clients. A table of what I tested myself and what I didn't — [`docs/CLIENT-STATUS.en.md`](docs/CLIENT-STATUS.en.md).
+I use Clash Verge (Windows) and FlClash (Android). Amnezia works, but because of instability I recommend Mihomo clients. A table of what I tested myself and what I didn't — [`docs/user/CLIENT-STATUS.en.md`](docs/user/CLIENT-STATUS.en.md).
 
 ## Detailed documentation
 
-- [`docs/SETUP.en.md`](docs/SETUP.en.md) — setup, `config/settings.yml` variables, WARP, post-deployment checks.
-- [`docs/RUNBOOK.en.md`](docs/RUNBOOK.en.md) — what to do when the VPN stops working.
-- [`docs/ROTATION.en.md`](docs/ROTATION.en.md) — rotating keys and client UUIDs.
-- [`docs/TEST-VPS.en.md`](docs/TEST-VPS.en.md) — checking a VPS before paying.
-- [`docs/GLOSSARY.en.md`](docs/GLOSSARY.en.md) — project terms.
-- [`docs/CLIENT-STATUS.en.md`](docs/CLIENT-STATUS.en.md) — client status.
-- [`docs/PLANNED.en.md`](docs/PLANNED.en.md) — what's planned next.
-- [`docs/RELEASE.en.md`](docs/RELEASE.en.md) — release policy and release statuses.
+- [`docs/user/SETUP.en.md`](docs/user/SETUP.en.md) — setup, `config/settings.yml` variables, WARP, post-deployment checks.
+- [`docs/user/RUNBOOK.en.md`](docs/user/RUNBOOK.en.md) — what to do when the VPN stops working.
+- [`docs/user/ROTATION.en.md`](docs/user/ROTATION.en.md) — rotating keys and client UUIDs.
+- [`docs/user/TEST-VPS.en.md`](docs/user/TEST-VPS.en.md) — checking a VPS before paying.
+- [`docs/user/GLOSSARY.en.md`](docs/user/GLOSSARY.en.md) — project terms.
+- [`docs/user/CLIENT-STATUS.en.md`](docs/user/CLIENT-STATUS.en.md) — client status.
+- [`docs/dev/PLANNED.en.md`](docs/dev/PLANNED.en.md) — what's planned next.
+- [`docs/dev/RELEASE.en.md`](docs/dev/RELEASE.en.md) — release policy and release statuses.
 - [`CHANGELOG.en.md`](CHANGELOG.en.md) — changes by version.
 
 ## License

@@ -1,7 +1,3 @@
-> **Document:** `docs/PLANNED.en.md` · **Location:** `docs/` · **Version:** v0.4.1 · **Last updated:** 2026-09-12
->
-> [Main README](../README.en.md) — project overview and quick start
-
 # What's planned, in progress, and done
 
 Deadlines are rough targets, not promises. The order can change.
@@ -39,11 +35,11 @@ Deadlines are rough targets, not promises. The order can change.
 - `xray.service` is enabled on deploy; `python3-venv` and `ufw` were auto-installed where needed
   (the `ufw` behavior changed in v0.4.1).
 - Readable `inventory.yml` errors with a hint on how to create the file from the template.
-- Release policy (`docs/RELEASE.en.md`), CHANGELOG (RU/EN), docs brought to one rhythm.
+- Release policy (`docs/dev/RELEASE.en.md`), CHANGELOG (RU/EN), docs brought to one rhythm.
 
 ## High priority
 
-- Ship v0.4.1 as a plain tag — per the exit criteria in `docs/RELEASE.en.md`: CI coverage of the
+- Ship v0.4.1 as a plain tag — per the exit criteria in `docs/dev/RELEASE.en.md`: CI coverage of the
   client scenarios (python + bash + PowerShell × Ubuntu/Windows/macOS) and a manual click-through
   of all scenarios on a real VPS following the testing cheatsheet; no calendar soak.
 - **[Client]** — a visual console client (TUI): the deploy wizard and everyday commands in one

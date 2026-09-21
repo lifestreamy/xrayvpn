@@ -9,7 +9,7 @@
 
 Самый простой вариант — готовая standalone-сборка без Python: скачайте файл своей платформы
 из [Releases](https://github.com/lifestreamy/xrayvpn/releases). Первый запуск и
-раскладка файлов — в [../docs/SETUP.md](../docs/SETUP.md), раздел «Standalone-приложение».
+раскладка файлов — в [../docs/user/SETUP.md](../docs/user/SETUP.md), раздел «Standalone-приложение».
 Как собрать самому (Nuitka onefile, режим отладки, smoke) — [BUILD.md](BUILD.md).
 
 Для работы с исходниками в репозитории нужен [uv](https://docs.astral.sh/uv/) (или Python 3.12+):
@@ -137,7 +137,7 @@ uv run --project python-client xrayvpn deploy --host 1.2.3.4 --dry-run
 `service logs [--since 30m] [--lines N] [--out DIR]` (дамп журнала на свою машину: конечный снимок
 окна, по умолчанию 30 минут; Ctrl+C прерывает загрузку и сохраняет частичный файл),
 `service reboot --yes` (крайний случай, только с явным `--yes`).
-Порядок действий при сбое — [`docs/RUNBOOK.md`](../docs/RUNBOOK.md).
+Порядок действий при сбое — [`docs/user/RUNBOOK.md`](../docs/user/RUNBOOK.md).
 
 ## Где что лежит
 
@@ -147,5 +147,5 @@ uv run --project python-client xrayvpn deploy --host 1.2.3.4 --dry-run
 - смежные зоны репо: `shell-clients/` (Bash/PowerShell, поддержка без развития), `scripts/`
   (инструменты разработки).
 
-Настройка сервера — [../docs/SETUP.md](../docs/SETUP.md), ротация ключей —
-[../docs/ROTATION.md](../docs/ROTATION.md).
+Настройка сервера — [../docs/user/SETUP.md](../docs/user/SETUP.md), ротация ключей —
+[../docs/user/ROTATION.md](../docs/user/ROTATION.md).

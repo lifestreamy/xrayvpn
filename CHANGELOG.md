@@ -1,7 +1,7 @@
 # Changelog
 
 История изменений по версиям. English version: [CHANGELOG.en.md](CHANGELOG.en.md).
-Политика выпусков и статусы релизов — [docs/RELEASE.md](docs/RELEASE.md).
+Политика выпусков и статусы релизов — [docs/dev/RELEASE.md](docs/dev/RELEASE.md).
 
 Формат:
 
@@ -71,7 +71,7 @@ Status: готовится (разработка завершена на `stagin
 
 ## v0.3 — 2026-09-05
 
-Status: experimental (критерии перевода в stable — `docs/RELEASE.md`).
+Status: experimental (критерии перевода в stable — `docs/dev/RELEASE.md`).
 
 ### Added
 - Основной CLI-клиент `xrayvpn` (Python): удалённый режим по SSH и локальный режим, все частые
@@ -79,8 +79,8 @@ Status: experimental (критерии перевода в stable — `docs/RELE
 - CI на GitHub Actions: workflow `molecule` — syntax-проверка, molecule-матрица ubuntu 22.04/24.04
   и debian 12, полный хост-прогон с файрволом и e2e через mihomo-клиент; workflow `python-client` —
   тесты и линт CLI.
-- Руководство ручной локальной проверки — `docs/TEST-LOCAL.md` (+EN).
-- Релизная политика — `docs/RELEASE.md` (+EN): статусы experimental/stable, схема тегов,
+- Руководство ручной локальной проверки — `docs/dev/TEST-LOCAL.md` (+EN).
+- Релизная политика — `docs/dev/RELEASE.md` (+EN): статусы experimental/stable, схема тегов,
   порядок выпуска. CHANGELOG-пара (этот файл и `CHANGELOG.en.md`).
 - Подсказки клиентам, когда `inventory.yml` отсутствует или не заполнен.
 - Опция включения `xray.service` при загрузке и авто-установка `ufw`/`python3-venv` при развёртывании.

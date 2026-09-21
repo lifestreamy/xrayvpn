@@ -11,4 +11,4 @@
 | `test/` | проверочные прогоны на локальной машине (`local_test.py`) |
 
 Оба скрипта — чистый Python 3, только stdlib, идемпотентны. Работают против тестового
-venv в WSL (`~/xray-venv`, см. [`docs/TEST-LOCAL.md`](../docs/TEST-LOCAL.md)).
+venv в WSL (`~/xray-venv`, см. [`docs/dev/TEST-LOCAL.md`](../docs/dev/TEST-LOCAL.md)).
