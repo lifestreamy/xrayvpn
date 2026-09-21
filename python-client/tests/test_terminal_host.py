@@ -444,6 +444,7 @@ def test_conhost_path_resolves_systemroot(monkeypatch: pytest.MonkeyPatch, tmp_p
     assert terminal_host.conhost_path({"SystemRoot": str(tmp_path / "nope")}) is None
 
 
+@pytest.mark.skipif(os.name != "nt", reason="GetSystemDirectoryW fallback is Windows-only")
 def test_conhost_path_falls_back_to_system_directory(
     monkeypatch: pytest.MonkeyPatch, tmp_path
 ) -> None:

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from pathlib import Path
 from typing import ClassVar
 
@@ -147,4 +148,7 @@ def test_remote_executor_honors_download_flag(
 def test_deploy_help_lists_new_flag() -> None:
     result = runner.invoke(app, ["deploy", "--help"])
     assert result.exit_code == 0
-    assert "--no-config-download" in result.output
+    # typer's rich renderer may inject ANSI styles inside an option name
+    # (e.g. under GITHUB_ACTIONS), so plain the output before matching.
+    plain = re.sub("\x1b\\[[0-9;]*m|\x1b\\]8;;[^\x07\x1b]*(\x07|\x1b\\\\)", "", result.output)
+    assert "--no-config-download" in plain
