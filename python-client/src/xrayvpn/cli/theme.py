@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import os
 import re
+import shutil
 import sys
 
 TOKENS: dict[str, str] = {
@@ -51,6 +52,95 @@ def plain(text: str) -> str:
 
 def visible_len(text: str) -> int:
     return len(plain(text))
+
+
+_WIDTH_ENV = "XRAYVPN_WIDTH"
+_WIDTH_FALLBACK = 80
+_WIDTH_MIN = 40
+
+
+def terminal_width() -> int:
+    """Current terminal width; XRAYVPN_WIDTH overrides it (tests, diagnostics)."""
+    override = os.environ.get(_WIDTH_ENV)
+    if override:
+        try:
+            return max(_WIDTH_MIN, int(override))
+        except ValueError:
+            pass
+    try:
+        columns = shutil.get_terminal_size(fallback=(_WIDTH_FALLBACK, 24)).columns
+    except (OSError, ValueError):
+        columns = _WIDTH_FALLBACK
+    return max(_WIDTH_MIN, columns)
+
+
+_ESCAPE_RE = re.compile(r"\x1b(?:\[[0-9;]*m|\][^\x07\x1b]*(?:\x07|\x1b\\))")
+_SPACES_RE = re.compile(r"( +)")
+
+
+def _units(text: str) -> list[tuple[str, int]]:
+    """Split into (chunk, visible_width) pairs; escape sequences count as zero."""
+    units: list[tuple[str, int]] = []
+    position = 0
+    for match in _ESCAPE_RE.finditer(text):
+        if match.start() > position:
+            chunk = text[position : match.start()]
+            units.append((chunk, len(chunk)))
+        units.append((match.group(0), 0))
+        position = match.end()
+    if position < len(text):
+        chunk = text[position:]
+        units.append((chunk, len(chunk)))
+    return units
+
+
+def _hard_break(text: str, width: int) -> list[str]:
+    pieces: list[str] = []
+    current = ""
+    count = 0
+    for chunk, chunk_width in _units(text):
+        if chunk_width == 0:
+            current += chunk
+            continue
+        for character in chunk:
+            current += character
+            count += 1
+            if count >= width:
+                pieces.append(current)
+                current, count = "", 0
+    if current:
+        pieces.append(current)
+    return pieces
+
+
+def wrap_visible(text: str, width: int) -> list[str]:
+    """Word-wrap to a visible width; ANSI/OSC-8 escapes stay attached to their text."""
+    if width <= 0 or visible_len(text) <= width:
+        return [text]
+    lines: list[str] = []
+    current = ""
+    current_width = 0
+    for word, word_width in (
+        (part, visible_len(part)) for part in _SPACES_RE.split(text) if part
+    ):
+        if word_width > width:
+            pieces = _hard_break(word, width)
+            if current.strip():
+                lines.append(current.rstrip())
+                current, current_width = "", 0
+            current, current_width = pieces[-1], visible_len(pieces[-1])
+            lines.extend(pieces[:-1])
+            continue
+        if current and current_width + word_width > width:
+            lines.append(current.rstrip())
+            current, current_width = "", 0
+            if not word.strip():
+                continue
+        current += word
+        current_width += word_width
+    if current.strip():
+        lines.append(current.rstrip())
+    return lines
 
 
 def _is_tty() -> bool:

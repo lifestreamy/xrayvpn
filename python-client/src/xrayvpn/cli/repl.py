@@ -111,13 +111,31 @@ def _unwrap(token: str) -> str | None:
     return None
 
 
-def _box(lines: list[str], color: Callable[[str], str] | None = None) -> str:
+def _box(
+    lines: list[str],
+    color: Callable[[str], str] | None = None,
+    max_width: int | None = None,
+    pad_width: int | None = None,
+) -> str:
     paint = color if color is not None else (lambda text: text)
-    width = max(theme.visible_len(line) for line in lines) + 2
+    limit = max_width - 4 if max_width is not None else None
+    content: list[str] = []
+    for line in lines:
+        content.extend(theme.wrap_visible(line, limit) if limit else [line])
+    width = max(theme.visible_len(line) for line in content) + 2
+    if max_width is not None:
+        width = min(width, max_width - 2)
+    if pad_width is not None:
+        width = min(pad_width, max_width - 2 if max_width is not None else pad_width)
     top = paint("+" + "-" * width + "+")
     body = "\n".join(
-        paint("|") + " " + line + " " * (width - 2 - theme.visible_len(line)) + " " + paint("|")
-        for line in lines
+        paint("|")
+        + " "
+        + line
+        + " " * max(0, width - 2 - theme.visible_len(line))
+        + " "
+        + paint("|")
+        for line in content
     )
     return f"{top}\n{body}\n{top}"
 
@@ -126,10 +144,15 @@ def _cmd_line(command: str, description: str) -> str:
     return f"  {theme.ok(command)} — {description}"
 
 
-def _join_boxes(left: str, right: str, gap: int = 2) -> list[str]:
+def _join_boxes(
+    left: str, right: str, gap: int = 2, max_width: int | None = None
+) -> list[str]:
     la = left.splitlines()
     ra = right.splitlines()
     lw = max(theme.visible_len(line) for line in la)
+    rw = max(theme.visible_len(line) for line in ra)
+    if max_width is not None and lw + gap + rw > max_width:
+        return la + [""] + ra
     rows = []
     for index in range(max(len(la), len(ra))):
         l = la[index] if index < len(la) else ""
@@ -143,63 +166,120 @@ def lang_notice() -> str:
     return i18n.t("REPL_LANG_NOTICE")
 
 
+_BANNER_DESIGN_WIDTH = 100
+_BANNER_NARROW_WIDTH = 72
+
+
+def _credits_lines() -> list[str]:
+    return [
+        (
+            f"{i18n.t('REPL_WELCOME_AUTHOR')} "
+            f"{theme.accent(theme.link(i18n.t('REPL_WELCOME_AUTHOR_NAME'), PROFILE_URL))}"
+        ),
+        (
+            f"{i18n.t('REPL_WELCOME_REPO')} "
+            f"{theme.link(i18n.t('REPL_WELCOME_REPO_NAME'), REPO_URL)}"
+        ),
+        (
+            f"{i18n.t('REPL_WELCOME_RELEASES')} "
+            f"{theme.link(i18n.t('REPL_WELCOME_RELEASES_NAME'), LATEST_RELEASE_PAGE)}"
+        ),
+    ]
+
+
+def _command_lines() -> list[tuple[str, str]]:
+    return [
+        ("help", i18n.t("REPL_WELCOME_CMD_HELP")),
+        ("version", i18n.t("REPL_WELCOME_CMD_VERSION")),
+        ("banner", i18n.t("REPL_WELCOME_CMD_BANNER")),
+        ("service", i18n.t("REPL_WELCOME_CMD_SERVICE")),
+        ("exit|quit|q", i18n.t("REPL_WELCOME_CMD_EXIT")),
+    ]
+
+
+def _retry_line() -> str:
+    return (
+        f"{theme.warn(i18n.t('REPL_WELCOME_RETRY'))} "
+        f"{theme.link(i18n.t('REPL_WELCOME_RETRY_DOCS'), REPO_DOCS_URL)}"
+    )
+
+
+def _wrap_lines(lines: list[str], width: int) -> list[str]:
+    wrapped: list[str] = []
+    for line in lines:
+        wrapped.extend(theme.wrap_visible(line, width))
+    return wrapped
+
+
+def _narrow_screen(version: str, width: int) -> str:
+    """No boxes when the terminal is too narrow for them."""
+    lines = [
+        theme.accent(i18n.t("REPL_WELCOME_TITLE")),
+        f"v{version}",
+        i18n.t("REPL_WELCOME_PURPOSE"),
+        "",
+        i18n.t("REPL_WELCOME_MAIN"),
+        f"  {theme.ok_bold('deploy')}",
+        _cmd_line("deploy --help", i18n.t("REPL_WELCOME_CMD_FLAGS")),
+        "",
+        i18n.t("REPL_WELCOME_OTHER"),
+    ]
+    lines += [_cmd_line(command, description) for command, description in _command_lines()]
+    lines += [
+        "",
+        i18n.t("REPL_WELCOME_SWITCH"),
+        "",
+        _retry_line(),
+        "",
+    ]
+    lines += _credits_lines()
+    return "\n".join(_wrap_lines(lines, width))
+
+
 def welcome_screen(version: str = __version__) -> str:
     """Screen 0: purpose, Main|Other side by side, language switch, credits."""
+    terminal = theme.terminal_width()
+    if terminal < _BANNER_NARROW_WIDTH:
+        return _narrow_screen(version, terminal)
+    outer = min(_BANNER_DESIGN_WIDTH, terminal - 1)
+    inner = outer - 4
     main_block = _box(
         [
             i18n.t("REPL_WELCOME_MAIN"),
             f"  {theme.ok_bold('deploy')}",
             _cmd_line("deploy --help", i18n.t("REPL_WELCOME_CMD_FLAGS")),
-        ]
+        ],
+        max_width=inner,
     )
     other_block = _box(
         [
             i18n.t("REPL_WELCOME_OTHER"),
             "",
-            _cmd_line("help", i18n.t("REPL_WELCOME_CMD_HELP")),
-            _cmd_line("version", i18n.t("REPL_WELCOME_CMD_VERSION")),
-            _cmd_line("banner", i18n.t("REPL_WELCOME_CMD_BANNER")),
-            _cmd_line("service", i18n.t("REPL_WELCOME_CMD_SERVICE")),
-            _cmd_line("exit|quit|q", i18n.t("REPL_WELCOME_CMD_EXIT")),
-        ]
-    )
-    language = _box([i18n.t("REPL_WELCOME_SWITCH")], color=theme.warn)
-    credits = _box(
-        [
-            (
-                f"{i18n.t('REPL_WELCOME_AUTHOR')} "
-                f"{theme.accent(theme.link(i18n.t('REPL_WELCOME_AUTHOR_NAME'), PROFILE_URL))}"
-            ),
-            (
-                f"{i18n.t('REPL_WELCOME_REPO')} "
-                f"{theme.link(i18n.t('REPL_WELCOME_REPO_NAME'), REPO_URL)}"
-            ),
-            (
-                f"{i18n.t('REPL_WELCOME_RELEASES')} "
-                f"{theme.link(i18n.t('REPL_WELCOME_RELEASES_NAME'), LATEST_RELEASE_PAGE)}"
-            ),
+            *[
+                _cmd_line(command, description)
+                for command, description in _command_lines()
+            ],
         ],
-        color=theme.muted,
+        max_width=inner,
     )
+    language = _box(
+        [i18n.t("REPL_WELCOME_SWITCH")], color=theme.warn, max_width=inner
+    )
+    credits = _box(_credits_lines(), color=theme.muted, max_width=inner)
     lines = [
         theme.accent(i18n.t("REPL_WELCOME_TITLE")),
         f"v{version}",
         i18n.t("REPL_WELCOME_PURPOSE"),
         "",
     ]
-    lines += _join_boxes(main_block, other_block)
+    lines += _join_boxes(main_block, other_block, max_width=inner)
     lines += [""]
     lines += language.splitlines()
     lines += [""]
-    lines += [
-        (
-            f"{theme.warn(i18n.t('REPL_WELCOME_RETRY'))} "
-            f"{theme.link(i18n.t('REPL_WELCOME_RETRY_DOCS'), REPO_DOCS_URL)}"
-        )
-    ]
+    lines += [_retry_line()]
     lines += [""]
     lines += credits.splitlines()
-    return _box(lines, color=theme.accent)
+    return _box(lines, color=theme.accent, max_width=outer, pad_width=outer - 2)
 
 
 def short_hint() -> str:
@@ -256,7 +336,8 @@ def _session(
     if update_hint is not None:
         hint = update_hint()
         if hint:
-            typer.echo(theme.muted(hint))
+            for hint_line in theme.wrap_visible(hint, theme.terminal_width()):
+                typer.echo(theme.muted(hint_line))
     last_rc = 0
     while True:
         try:
