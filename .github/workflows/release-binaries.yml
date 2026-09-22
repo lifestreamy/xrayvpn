@@ -55,10 +55,10 @@ jobs:
     env:
       RAW_REV: ${{ github.event_name == 'push' && github.ref_name || inputs.tag }}
     steps:
-      - uses: actions/checkout@34e114876b0b11c69e3ffa41ee652cc36245c427 # v6.0.2
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ github.event_name == 'workflow_dispatch' && inputs.ref || '' }}
-      - uses: astral-sh/setup-uv@dde576740972c5904b09b10092d1f1ae23989c47 # v6.0.2
+      - uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
         with:
           version: ${{ env.UV_VERSION }}
           enable-cache: true
@@ -115,7 +115,7 @@ jobs:
             popd
             Remove-Item -Recurse -Force $fixture -ErrorAction SilentlyContinue
           }
-      - uses: actions/upload-artifact@330a80a2a216371195056eb380486c0df05cbd70 # v5.0.8
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: xrayvpn-${{ matrix.token }}
           path: python-client/dist-binary/${{ steps.build.outputs.asset }}
@@ -127,10 +127,10 @@ jobs:
       run:
         shell: bash
     steps:
-      - uses: actions/checkout@34e114876b0b11c69e3ffa41ee652cc36245c427 # v6.0.2
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ github.event_name == 'workflow_dispatch' && inputs.ref || '' }}
-      - uses: astral-sh/setup-uv@dde576740972c5904b09b10092d1f1ae23989c47 # v6.0.2
+      - uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
         with:
           version: ${{ env.UV_VERSION }}
           enable-cache: true
@@ -155,7 +155,7 @@ jobs:
           grep -q 'roles' <<<"$dry"
           grep -q 'config' <<<"$dry"
           [[ "$first" == xrayvpn* ]]
-      - uses: actions/upload-artifact@330a80a2a216371195056eb380486c0df05cbd70 # v5.0.8
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: python-dist
           path: python-client/dist/
@@ -170,10 +170,10 @@ jobs:
     env:
       RAW_REV: ${{ github.event_name == 'push' && github.ref_name || inputs.tag }}
     steps:
-      - uses: actions/checkout@34e114876b0b11c69e3ffa41ee652cc36245c427 # v6.0.2
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ github.event_name == 'workflow_dispatch' && inputs.ref || '' }}
-      - uses: actions/download-artifact@85b33142143d8d70e61a4ad1f2283cfb1485ed98 # v5.0.0
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           name: xrayvpn-linux-x64
           path: bundle
@@ -229,7 +229,7 @@ jobs:
             -C "$root" .
           dpkg-deb -I "deb/xrayvpn_${version}_amd64.deb"
           dpkg-deb -c "deb/xrayvpn_${version}_amd64.deb"
-      - uses: actions/upload-artifact@330a80a2a216371195056eb380486c0df05cbd70 # v5.0.8
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: deb
           path: deb/*.deb
@@ -245,10 +245,10 @@ jobs:
       run:
         shell: bash
     steps:
-      - uses: actions/checkout@34e114876b0b11c69e3ffa41ee652cc36245c427 # v6.0.2
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ github.event_name == 'workflow_dispatch' && inputs.ref || '' }}
-      - uses: actions/download-artifact@85b33142143d8d70e61a4ad1f2283cfb1485ed98 # v5.0.0
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           pattern: "*"
           path: assets
