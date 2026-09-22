@@ -1,0 +1,28 @@
+#!/usr/bin/env bash
+# Black-box snapshot (read-only) written by the xray-ansible role; every pass
+# appends one labelled line per check to journald via `logger -t xray-obs`.
+set -u
+
+snap() { logger -t xray-obs -- "$*"; }
+oneline() { tr '\n' '|' | sed -e 's/  */ /g'; }
+
+snap "obs begin $(date -u '+%F %T UTC')"
+snap "unit $(systemctl is-active xray 2>&1) $(systemctl show xray -p NRestarts -p ActiveEnterTimestamp 2>&1 | oneline)"
+snap "listeners $(ss -tulpn '( sport = :{{ xray_port | default(443) }} or sport = :22 )' 2>&1 | oneline)"
+snap "ip_rules $(ip rule 2>&1 | oneline)"
+if command -v nft >/dev/null 2>&1; then
+  snap "nft_tail $(nft list ruleset 2>&1 | tail -n 15 | oneline)"
+else
+  snap "ipt_tail $(iptables -S 2>&1 | tail -n 15 | oneline)"
+fi
+snap "storm_10m $(journalctl -u xray --since '-10m' -o cat 2>/dev/null | grep -cE 'wireguard|outbound')"
+snap "mem $(free -m 2>&1 | oneline)"
+snap "oom_tail $(dmesg -T 2>/dev/null | grep -iE 'out of memory|oom-kill|killed process' | tail -n 3 | oneline)"
+{% if warp_enabled | default(false) | bool %}
+if timeout 3 bash -c "exec 3<>/dev/udp/{{ warp_endpoint.split(':')[0] }}/{{ warp_endpoint.split(':')[1] }}" 2>/dev/null; then
+  snap "wg_endpoint {{ warp_endpoint }} udp=ok"
+else
+  snap "wg_endpoint {{ warp_endpoint }} udp=fail"
+fi
+{% endif %}
+snap "version xray={{ xray_version }} runtime={{ xray_runtime }}"

@@ -1,9 +1,11 @@
 """Inventory generation (PyYAML, no regex).
 
-One builder serves both execution modes:
-- local:  `ansible_connection=local` (the playbook runs on the current host);
-- remote: generated *on the server* with `ansible_connection=local` and the
-  bootstrap venv's interpreter (inventory.yml is never uploaded — ADR-008).
+One builder covers both shapes, always with a VPS as the target:
+- remote execution: generated *on the server* with `ansible_connection=local`
+  and the bootstrap venv's interpreter (ADR-008 keeps the personal
+  inventory.yml off the wire);
+- local execution: generated on the control node with `ansible_connection=ssh`
+  and explicit connection params for the VPS.
 
 The generated file uses its own gitignored name so the user's personal
 `inventory.yml` is never touched or overwritten.
@@ -16,6 +18,11 @@ from typing import Any
 
 import yaml
 
+from xrayvpn.core.runtime_paths import (
+    PERSONAL_INVENTORY_EXAMPLE_NAME,
+    PERSONAL_INVENTORY_NAME,
+)
+
 INVENTORY_FILE = ".xrayvpn-inventory.yml"
 
 
@@ -25,18 +32,21 @@ def build_inventory(
     connection: str = "local",
     host: str = "vpn",
     python_interpreter: str | None = None,
+    host_params: dict[str, str] | None = None,
 ) -> str:
     """Render a one-host inventory YAML. `python_interpreter=None` lets Ansible discover it."""
     host_vars: dict[str, Any] = {"ansible_connection": connection}
+    if host_params:
+        host_vars.update(host_params)
     if python_interpreter is not None:
         host_vars["ansible_python_interpreter"] = python_interpreter
     body: dict[str, Any] = {"all": {"hosts": {host: host_vars}, "vars": vars}}
     return yaml.safe_dump(body, sort_keys=False, allow_unicode=True)
 
 
-def write_inventory(repo_root: Path, content: str) -> Path:
-    """Persist inventory content at the repo root (file is gitignored)."""
-    path = repo_root / INVENTORY_FILE
+def write_inventory(workspace: Path, content: str) -> Path:
+    """Persist generated inventory content into the writable workspace root."""
+    path = workspace / INVENTORY_FILE
     path.write_text(content, encoding="utf-8")
     return path
 
@@ -76,16 +86,32 @@ def validate_connection(connection: dict[str, str]) -> list[str]:
     return problems
 
 
-def parse_user_inventory(repo_root: Path) -> tuple[dict[str, str], dict[str, Any]]:
+def user_inventory_hosts(workspace: Path) -> list[str]:
+    """Host names declared in the personal inventory.yml (read-only)."""
+    path = workspace / PERSONAL_INVENTORY_NAME
+    if not path.is_file():
+        raise RuntimeError(f"inventory file not found: {path}")
+    with path.open("r", encoding="utf-8") as handle:
+        data = yaml.safe_load(handle) or {}
+    all_section = data.get("all", {}) if isinstance(data, dict) else {}
+    hosts = all_section.get("hosts", {}) if isinstance(all_section, dict) else {}
+    return [str(name) for name in hosts]
+
+
+def parse_user_inventory(
+    workspace: Path, *, example_dir: Path | None = None
+) -> tuple[dict[str, str], dict[str, Any]]:
     """Read the user's personal inventory.yml (read-only; never written).
 
-    Returns (connection params, extra vars). Connection keys are the
-    ansible_* connection fields; every other host/all var is treated as a
-    playbook extra var.
+    The file lives in the writable workspace; the template shown in the
+    missing-file hint comes from `example_dir` (the payload bundle in
+    packaged mode, the workspace itself by default). Returns (connection
+    params, extra vars). Connection keys are the ansible_* connection
+    fields; every other host/all var is treated as a playbook extra var.
     """
-    path = repo_root / "inventory.yml"
+    path = workspace / PERSONAL_INVENTORY_NAME
     if not path.is_file():
-        example = repo_root / "inventory.yml.example"
+        example = (example_dir or workspace) / PERSONAL_INVENTORY_EXAMPLE_NAME
         raise RuntimeError(
             f"inventory file not found: {path}\n"
             "create it from the template and fill in ansible_host, ansible_user, "
@@ -111,8 +137,8 @@ def parse_user_inventory(repo_root: Path) -> tuple[dict[str, str], dict[str, Any
                 continue
             for key, value in host_vars.items():
                 if key in CONNECTION_KEYS:
-                    # empty YAML scalars (None) stay unset — never str(None)="None"
-                    if value is not None and key not in connection:
+                    # empty YAML scalars (None and "") stay unset — parity for every consumer
+                    if value not in (None, "") and key not in connection:
                         connection[key] = str(value)
                 elif not key.startswith("ansible_"):
                     extra_vars[key] = value

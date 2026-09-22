@@ -14,13 +14,7 @@ ExecStop=/bin/kill -TERM $MAINPID
 Restart=always
 RestartSec=10
 
-# Hardening (native binary is dropped under /usr/local/xray with 0755;
-# config is 0600; this profile keeps it minimal but tightens writable
-# paths and disables new privileges so the process cannot be escalated).
-# ProtectHome=read-only (not =true): with =true systemd hides /home and
-# /root entirely, which also hides the ReadWritePaths carve-outs for
-# config dirs that live under /root (observed on WSL systemd — the
-# service then fails with "no such file or directory" on the config).
+# ProtectHome=read-only (not =true): =true hides /root and breaks the ReadWritePaths below.
 NoNewPrivileges=true
 ProtectSystem=strict
 ProtectHome=read-only

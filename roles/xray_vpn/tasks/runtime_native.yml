@@ -1,10 +1,5 @@
 ---
-# Native runtime — install Xray-core as a systemd-managed host binary.
-# Downloads the official Xray-linux-64.zip release asset, unarchives it
-# under /usr/local/xray/, exposes /usr/local/bin/xray via symlink, and
-# relies on xray.service.native.j2 (rendered by main.yml) to start the
-# process. Idempotent: re-runs are no-ops if the version on disk matches
-# xray_version and the binary is already linked.
+# Native runtime: official Xray-linux-64.zip → /usr/local/xray + symlink; idempotent by binary stat.
 
 - name: Set native install paths
   ansible.builtin.set_fact:

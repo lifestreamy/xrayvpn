@@ -1,26 +1,39 @@
 [project]
-name = "xrayvpn-client"
-version = "0.1.0"
+name = "xrayvpn"
+version = "0.4.1"
 description = "Python client for provisioning Xray VLESS + REALITY VPN servers (local and remote execution)"
 readme = "README.md"
 requires-python = ">=3.12"
+license = "AGPL-3.0-or-later"
+classifiers = [
+    "Environment :: Console",
+    "License :: OSI Approved :: GNU Affero General Public License v3 or later (AGPLv3+)",
+    "Programming Language :: Python :: 3 :: Only",
+    "Topic :: System :: Systems Administration",
+]
 dependencies = [
     "fabric>=3.2.3",
     "inquirerpy>=0.3.4",
     "pyyaml>=6.0.3",
     "rich>=15.0.0",
-    "typer>=0.27.2",
+    "typer>=0.27.2,<0.28",
 ]
 
 [project.scripts]
-xrayvpn = "xrayvpn.cli.main:app"
+xrayvpn = "xrayvpn.cli.entry:main"
 
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
+[tool.hatch.build.hooks.custom]
+path = "hatch_build.py"
+
 [tool.hatch.build.targets.wheel]
 packages = ["src/xrayvpn"]
+
+[tool.hatch.build.targets.sdist]
+include = ["src", "hatch_build.py", "build_support.py", "xrayvpn.spec", "BUILD.md", "BUILD.en.md", "pyproject.toml", "uv.lock", "README.md", "README.en.md"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
@@ -28,9 +41,14 @@ testpaths = ["tests"]
 [tool.ruff]
 line-length = 100
 target-version = "py312"
+extend-exclude = ["xrayvpn.spec"]
 
 [dependency-groups]
 dev = [
     "pytest>=9.1.1",
     "ruff>=0.16.5",
+]
+build = [
+    "nuitka==4.2.1",
+    "pyinstaller==6.22.2",
 ]

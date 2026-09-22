@@ -1,0 +1,66 @@
+---
+# Storm/egress detection -> timed point-fix of xray.service (host is never touched).
+
+- name: Deploy xray-watchdog script and units
+  when: xray_watchdog_enabled | default(true) | bool
+  tags: watchdog
+  block:
+    - name: Install xray-watchdog script
+      ansible.builtin.template:
+        src: xray-watchdog.sh.j2
+        dest: /usr/local/bin/xray-watchdog
+        mode: '0755'
+      become: true
+
+    - name: Install xray-watchdog systemd unit
+      ansible.builtin.template:
+        src: xray-watchdog.service.j2
+        dest: /etc/systemd/system/xray-watchdog.service
+        mode: '0644'
+      become: true
+      notify: Reload systemd
+
+    - name: Install xray-watchdog systemd timer
+      ansible.builtin.template:
+        src: xray-watchdog.timer.j2
+        dest: /etc/systemd/system/xray-watchdog.timer
+        mode: '0644'
+      become: true
+      notify: Reload systemd
+
+    # The probe inbound only exists in the RUNNING config after the notify-restart; start the timer
+    # behind that flush so mid-play cycles cannot see a false dead probe.
+    - name: Flush config-restart handlers before arming the watchdog
+      ansible.builtin.meta: flush_handlers
+
+    - name: Enable and start xray-watchdog timer
+      ansible.builtin.systemd:
+        name: xray-watchdog.timer
+        state: started
+        enabled: true
+        daemon_reload: true
+      become: true
+
+- name: Tear down xray-watchdog when disabled
+  when: not (xray_watchdog_enabled | default(true) | bool)
+  tags: watchdog
+  block:
+    - name: Stop and disable xray-watchdog timer
+      ansible.builtin.systemd:
+        name: xray-watchdog.timer
+        state: stopped
+        enabled: false
+      become: true
+      failed_when: false
+
+    - name: Remove xray-watchdog units, script and state
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - /etc/systemd/system/xray-watchdog.timer
+        - /etc/systemd/system/xray-watchdog.service
+        - /usr/local/bin/xray-watchdog
+        - /run/xray-watchdog
+      become: true
+      notify: Reload systemd

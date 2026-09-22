@@ -1,33 +1,8 @@
 ---
-# REALITY identity persistence — unified, runtime-aware implementation.
-#
-# All xray x25519 invocations go through {{ xray_cli_command }} (set in
-# runtime_setup.yml), so the same keygen path works for:
-#   - native : /usr/local/bin/xray x25519 ...
-#   - docker : docker run --rm <image> xray x25519 ...
-#   - podman : podman run --rm <image> xray x25519 ...
-#
-# State lives in {{ xray_config_dir }}/reality-state.json (private_key,
-# public_key, short_id, client_uuids). On every run the role:
-#   1. Inspects current state + existing config.json.
-#   2. Reads state if present.
-#   3. Computes xray_do_migration / xray_generate_identity gates
-#      (BEFORE mutating anything — based on the inspected state).
-#   4. If xray_reality_rotate is true: backs up state and removes it
-#      (so step 3 re-classifies as fresh generation next iteration).
-#   5. If xray_do_migration: extracts identity from existing config.json
-#      and re-derives the public key via xray_cli_command.
-#   6. If xray_generate_identity: generates a fresh private key + derives
-#      public key + picks a random short ID + generates num_clients UUIDs.
-#   7. Adjusts client_uuids length (append-only, never truncates).
-#   8. Exposes xray_vpn_xray_private_key / _public_key / _short_id /
-#      xray_vpn_client_uuids for the rest of the role (config.json +
-#      client exports).
+# REALITY identity persistence: state in {{ xray_config_dir }}/reality-state.json;
+# keygen via {{ xray_cli_command }} (runtime-aware); gates computed BEFORE any mutation.
 
-# === REALITY identity persistence ===
-
-# keys.yml owns its state file location — ensure the directory exists
-# even when this file is imported before main.yml's own dir setup.
+# Own state dir: ensure it exists even when imported before main.yml's dir setup.
 - name: Ensure Xray config directory exists (REALITY state)
   ansible.builtin.file:
     path: "{{ xray_config_dir }}"
@@ -35,7 +10,6 @@
     mode: '0700'
   tags: config
 
-# -- Step 1: Inspect current state --
 - name: Check if REALITY state file exists
   ansible.builtin.stat:
     path: "{{ xray_config_dir }}/reality-state.json"
@@ -57,7 +31,6 @@
   when: xray_debug | default(false) | bool
   tags: config,debug
 
-# -- Step 2: Read existing state (if present) --
 - name: Read REALITY state
   ansible.builtin.slurp:
     src: "{{ xray_config_dir }}/reality-state.json"
@@ -79,7 +52,6 @@
       - reality_state is defined
   tags: config,debug
 
-# -- Step 3: Compute identity gates (BEFORE mutation) --
 - name: Set identity gates
   ansible.builtin.set_fact:
     xray_do_migration: >-
@@ -104,11 +76,10 @@
   when: xray_debug | default(false) | bool
   tags: config,debug
 
-# -- Step 4: Rotation (backup + delete state) --
 - name: Backup state before rotation
   ansible.builtin.copy:
     src: "{{ xray_config_dir }}/reality-state.json"
-    dest: "{{ xray_config_dir }}/reality-state.json.bak-{{ ansible_date_time.date }}-{{ ansible_date_time.time }}"
+    dest: "{{ xray_config_dir }}/reality-state.json.bak-{{ ansible_facts['date_time']['date'] }}-{{ ansible_facts['date_time']['time'] }}"
     remote_src: true
     mode: '0600'
   when:
@@ -125,7 +96,6 @@
     - xray_reality_rotate | default(false) | bool
   tags: config
 
-# -- Step 5: Migration from existing config.json --
 - name: Slurp existing config.json for migration
   ansible.builtin.slurp:
     src: "{{ xray_config_dir }}/config.json"
@@ -266,7 +236,6 @@
     - reality_state is not defined
   tags: config
 
-# -- Step 6: Fresh identity generation --
 - name: Generate fresh REALITY private key
   ansible.builtin.shell: |
     set -o pipefail
@@ -410,7 +379,7 @@
   when: xray_generate_identity | bool
   tags: config
 
-# -- Step 7: UUID count adjustment (append only, never truncate state) --
+# Append-only: never truncates stored UUIDs.
 - name: Ensure state has enough UUIDs for num_clients
   ansible.builtin.set_fact:
     reality_state: "{{ reality_state | combine({'client_uuids': reality_state.client_uuids + [lookup('pipe', 'uuidgen')]}) }}"
@@ -436,7 +405,6 @@
   when: xray_debug | default(false) | bool
   tags: config,debug
 
-# -- Step 8: Set facts from reality_state (always) --
 - name: Set REALITY facts from state
   ansible.builtin.set_fact:
     xray_vpn_xray_private_key: "{{ reality_state.private_key }}"

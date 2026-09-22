@@ -1,0 +1,63 @@
+name: publish-pypi
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      repository_url:
+        description: Upload target; rehearsal runs must keep the TestPyPI default
+        default: https://test.pypi.org/legacy/
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    if: github.event_name == 'workflow_dispatch' || github.event.release.prerelease == false
+    runs-on: ubuntu-24.04
+    environment: pypi
+    permissions:
+      contents: read
+      id-token: write
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event_name == 'release' && github.event.release.tag_name || '' }}
+      - uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
+        with:
+          version: "0.12.10"
+          enable-cache: true
+      - name: Build wheel and sdist
+        working-directory: python-client
+        run: uv build --wheel --sdist
+      - name: Guard version and upload target
+        id: guard
+        run: |
+          set -euo pipefail
+          version="$(cd python-client && uv version --short)"
+          if [ "${{ github.event_name }}" = "release" ]; then
+            tag="${{ github.event.release.tag_name }}"
+            expected="${tag#v}"
+            expected="${expected%%_*}"
+            if [ "$version" != "$expected" ]; then
+              echo "pyproject version $version does not match tag $tag" >&2
+              exit 1
+            fi
+            echo "repository_url=https://upload.pypi.org/legacy/" >> "$GITHUB_OUTPUT"
+          else
+            url="${{ inputs.repository_url }}"
+            if [ "$url" != "https://test.pypi.org/legacy/" ]; then
+              echo "dispatch runs upload only to https://test.pypi.org/legacy/" >&2
+              exit 1
+            fi
+            echo "repository_url=$url" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Upload the distribution
+        uses: pypa/gh-action-pypi-publish@dc37677b2e1c63e2034f94d8a5b11f265b73ba33 # v1.14.2
+        with:
+          skip-existing: true
+          repository-url: ${{ steps.guard.outputs.repository_url }}

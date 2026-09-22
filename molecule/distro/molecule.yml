@@ -1,23 +1,6 @@
 ---
-# molecule/distro — distro-matrix scenario (docker driver).
-#
-# Converges and verifies exactly what the host-based default scenario does,
-# but inside systemd containers, so CI can run a leg per supported distro.
-# The image comes from MOLECULE_IMAGE (default: ubuntu2404 below); the CI
-# workflow sets it per matrix leg ({ubuntu2204, ubuntu2404, debian12}).
-# Required on the controller: docker daemon + the collections pinned in
-# molecule/requirements.yml (community.docker provides the `docker`
-# connection plugin; molecule's galaxy dependency step installs them).
-#
-# Divergences from molecule/default (by design):
-#   - xray_manage_firewall stays false here (ufw/iptables are unreliable in
-#     containers); firewall coverage is the native CI job that runs the
-#     default scenario with -e xray_manage_firewall=true.
-#   - converge.yml / verify.yml mirror molecule/default/ except for the
-#     hosts/connection lines (the driver owns the connection). Keep the
-#     knob blocks in sync when either scenario changes.
-#   - verify.yml imports ../default/e2e.yml — shared e2e task file
-#     (container-safe: tun disabled, mixed-port proxy).
+# Distro-matrix scenario: systemd containers, image via MOLECULE_IMAGE (CI sets per leg).
+# xray_manage_ufw=false here (scoping); ufw coverage — native CI job.
 
 dependency:
   name: galaxy
@@ -42,8 +25,6 @@ platforms:
 
 provisioner:
   name: ansible
-  # Same as molecule/default: resolved from the scenario directory, `../..`
-  # is the repo root where the xray_vpn role lives.
   config_options:
     defaults:
       roles_path: ../..

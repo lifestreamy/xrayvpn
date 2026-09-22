@@ -1,0 +1,111 @@
+#!/usr/bin/env bash
+# xray-ansible watchdog: detects the WARP-outbound failure class and restarts
+# xray.service only (never the host). Detection:
+#  a) journal storm: >= {{ xray_watchdog_storm_count | default(20) }} wireguard/outbound
+#     error lines for xray.service within 5 min (fixed window);
+#  b) egress probe dead for >= {{ xray_watchdog_min_fail_cycles | default(2) }} consecutive cycles
+#     (loopback socks {{ xray_watchdog_probe_port | default(10820) }} forced through the warp outbound;
+#     active only when the config carries the probe inbound).
+# Restarts are capped: <= {{ xray_watchdog_max_restarts_per_hour | default(3) }} per hour, beyond
+# that only an ALERT line is logged. Counters live in /run and reset on reboot (acceptable: the
+# service comes up fresh).
+# Selftest (XRAY_WATCHDOG_FIXTURE=file and/or XRAY_WATCHDOG_DRY_RUN=1): the storm is read from the
+# file, the probe is assumed alive, events print to stdout instead of journald and NO state file is
+# touched — a selftest run cannot spend the real restart budget or reset the failure counter.
+set -u
+
+STATE="${XRAY_WATCHDOG_STATE:-/run/xray-watchdog}"
+TAG="xray-watchdog"
+STORM_THRESHOLD={{ xray_watchdog_storm_count | default(20) }}
+PROBE_MIN_CYCLES={{ xray_watchdog_min_fail_cycles | default(2) }}
+MAX_RESTARTS_PER_HOUR={{ xray_watchdog_max_restarts_per_hour | default(3) }}
+PROBE_PORT={{ xray_watchdog_probe_port | default(10820) }}
+STORM_REGEX='proxy/wireguard.*(failed|timeout)'
+
+SELFTEST=0
+if [[ -n "${XRAY_WATCHDOG_FIXTURE:-}" || "${XRAY_WATCHDOG_DRY_RUN:-0}" = "1" ]]; then
+  SELFTEST=1
+fi
+
+if [[ "$SELFTEST" = "0" ]]; then
+  mkdir -p "$STATE" 2>/dev/null
+fi
+
+log() {
+  if [[ "$SELFTEST" = "1" ]]; then
+    printf '%s\n' "$*"
+  else
+    logger -t "$TAG" -- "$*"
+  fi
+}
+
+STORM=0
+if [[ -n "${XRAY_WATCHDOG_FIXTURE:-}" ]]; then
+  STORM=$(grep -cE "$STORM_REGEX" "$XRAY_WATCHDOG_FIXTURE" 2>/dev/null || true)
+else
+  STORM=$(journalctl -u xray --since '-5m' -o cat 2>/dev/null | grep -cE "$STORM_REGEX" || true)
+fi
+[[ "$STORM" =~ ^[0-9]+$ ]] || STORM=0
+
+{% if warp_enabled | default(false) | bool %}
+PROBE_OK=0
+if [[ -n "${XRAY_WATCHDOG_FIXTURE:-}" ]]; then
+  PROBE_OK=1
+elif body=$(timeout 8 curl -s --socks5-hostname "127.0.0.1:${PROBE_PORT}" --max-time 6 https://api.ipify.org 2>/dev/null); then
+  [[ -n "$body" ]] && PROBE_OK=1
+elif body=$(timeout 8 curl -s --socks5-hostname "127.0.0.1:${PROBE_PORT}" --max-time 6 https://checkip.amazonaws.com 2>/dev/null); then
+  [[ -n "$body" ]] && PROBE_OK=1
+fi
+{% else %}
+PROBE_OK=1  # no egress branch in config; probe detection inactive (never triggers)
+{% endif %}
+
+fails_file="$STATE/probe_fail_cycles"
+prev_fails=$(cat "$fails_file" 2>/dev/null || echo 0)
+[[ "$prev_fails" =~ ^[0-9]+$ ]] || prev_fails=0
+if [[ "$PROBE_OK" -eq 1 ]]; then
+  FAILS=0
+  [[ "$SELFTEST" = "0" ]] && echo 0 > "$fails_file"
+else
+  FAILS=$((prev_fails + 1))
+  [[ "$SELFTEST" = "0" ]] && echo "$FAILS" > "$fails_file"
+fi
+
+trig=""
+[[ "$STORM" -ge "$STORM_THRESHOLD" ]] && trig="storm=$STORM"
+if [[ "$PROBE_OK" -eq 0 && "$FAILS" -ge "$PROBE_MIN_CYCLES" ]]; then
+  trig="${trig:+$trig,}probe_fails=$FAILS"
+fi
+if [[ -z "$trig" ]]; then
+  exit 0
+fi
+
+now=$(date +%s)
+budget_kept=""
+n=0
+if [[ -f "$STATE/restarts" ]]; then
+  while read -r ts; do
+    [[ "$ts" =~ ^[0-9]+$ ]] || continue
+    if (( now - ts < 3600 )); then
+      budget_kept+="$ts"$'\n'
+      n=$((n + 1))
+    fi
+  done < "$STATE/restarts"
+fi
+mem=$(free -m 2>/dev/null | awk '/^Mem:/ {print $3 "/" $2 " MB"}')
+nrest=$(systemctl show xray -p NRestarts 2>/dev/null | cut -d= -f2)
+if (( n >= MAX_RESTARTS_PER_HOUR )); then
+  log "[ALERT] $trig but restart budget spent ($n/$MAX_RESTARTS_PER_HOUR per hour); operator action needed (see docs/RUNBOOK)"
+  exit 0
+fi
+if [[ "$SELFTEST" = "0" ]]; then
+  printf '%s%s\n' "$budget_kept" "$now" > "$STATE/restarts" 2>/dev/null
+  echo 0 > "$fails_file"
+fi
+log "restart xray: $trig (storm_threshold=$STORM_THRESHOLD probe_min_cycles=$PROBE_MIN_CYCLES restarts_in_hour=$((n + 1))/$MAX_RESTARTS_PER_HOUR mem=${mem:-?} NRestarts=${nrest:-?})"
+if [[ "${XRAY_WATCHDOG_DRY_RUN:-0}" = "1" ]]; then
+  log "[DRY] systemctl reset-failed xray && systemctl restart xray"
+  exit 0
+fi
+systemctl reset-failed xray
+systemctl restart xray

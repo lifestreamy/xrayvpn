@@ -1,11 +1,5 @@
 ---
-# molecule/default/prepare.yml — runs ONCE after the delegated driver
-# initialises, before converge. For the native scenario the role's
-# runtime_setup.yml installs curl / ca-certificates / unzip, so
-# nothing extra is needed here. The file is kept for symmetry with
-# the docker scenario (where the inner dockerd + vfs storage driver
-# used to be configured here) and as a hook for future per-runner
-# tweaks (e.g. enabling lingering for podman).
+# No-op: runtime_setup.yml installs apt deps during converge; kept for scenario symmetry.
 - name: Prepare
   hosts: localhost
   connection: local

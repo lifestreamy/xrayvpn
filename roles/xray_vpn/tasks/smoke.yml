@@ -1,12 +1,6 @@
 ---
-# Post-deploy smoke checks (non-fatal; warnings only).
-# All checks use failed_when: false so a smoke failure does not abort
-# the deploy — the operator inspects warnings and the journal.
-# Branched by xray_runtime so each runtime's reality is verified with
-# the right tool: native binary version + systemctl, or container
-# inspect for docker/podman.
+# Non-fatal post-deploy checks: failed_when:false everywhere — warnings, not aborts.
 
-# === Native runtime smoke ===
 - name: Native - report xray binary version
   ansible.builtin.command:
     cmd: "{{ xray_symlink | default('/usr/local/bin/xray') }} version"
@@ -48,7 +42,6 @@
     - xray_debug | default(false) | bool
   tags: smoke,debug
 
-# === Docker runtime smoke ===
 - name: Docker - inspect xray container image
   ansible.builtin.command:
     cmd: docker inspect xray --format "{{ '{{' }} .Config.Image {{ '}}' }}"
@@ -71,29 +64,6 @@
   failed_when: false
   tags: smoke
 
-# === Podman runtime smoke ===
-- name: Podman - inspect xray container image
-  ansible.builtin.command:
-    cmd: podman inspect xray --format "{{ '{{' }} .ImageName {{ '}}' }}"
-  register: xray_podman_image_check
-  changed_when: false
-  failed_when: false
-  when: xray_runtime == 'podman'
-  tags: smoke
-
-- name: Podman - assert pinned image
-  ansible.builtin.assert:
-    that:
-      - xray_podman_image_check.stdout is search(xray_container_image | default(''))
-    success_msg: "Xray container uses pinned image: {{ xray_podman_image_check.stdout }}"
-    fail_msg: "WARNING: Xray container image '{{ xray_podman_image_check.stdout }}' may not match pinned '{{ xray_container_image }}'"
-  when:
-    - xray_runtime == 'podman'
-    - xray_podman_image_check.stdout | default('') != ''
-  failed_when: false
-  tags: smoke
-
-# === Common smoke (all runtimes) ===
 - name: Wait for Xray TCP port to be listening
   ansible.builtin.wait_for:
     port: "{{ xray_port | default(443) }}"
@@ -115,4 +85,14 @@
   ansible.builtin.debug:
     msg: "Xray journal error lines: {{ xray_journal.stdout_lines | select('search', 'error|ERROR|fail|FAIL|panic|PANIC') | list | length }}"
   when: xray_journal.stdout_lines is defined
+  tags: smoke
+
+- name: Force a black-box snapshot for the post-deploy baseline
+  ansible.builtin.systemd_service:
+    name: xray-obs-snapshot.service
+    state: started
+  changed_when: false
+  failed_when: false
+  become: true
+  when: xray_obs_timer | default(true) | bool
   tags: smoke

@@ -24,7 +24,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-SUPPORTED_RUNTIMES = ("native", "docker", "podman")
+SUPPORTED_RUNTIMES = ("native", "docker")
 
 
 def run_in_venv(venv_dir: Path, cmd: list[str]) -> int:
@@ -32,11 +32,7 @@ def run_in_venv(venv_dir: Path, cmd: list[str]) -> int:
     env = os.environ.copy()
     env["PATH"] = f"{venv_bin}{os.pathsep}{env.get('PATH', '')}"
     env["VIRTUAL_ENV"] = str(venv_dir)
-    # Force visible per-task progress so a long-running converge does not look
-    # hung. ANSIBLE_VERBOSITY=3 prints every task with its (sanitized) output;
-    # FORCE_COLOR keeps the colour in CI log capture. Test-key material is
-    # already no_log'd in the role (derive tasks); ephemeral test keys may be
-    # echoed back inside tasks, which is fine for an ephemeral test setup.
+    # Visible per-task progress so a long converge does not look hung; ephemeral test keys may echo — fine.
     env.setdefault("ANSIBLE_VERBOSITY", "3")
     env.setdefault("ANSIBLE_FORCE_COLOR", "1")
     env.setdefault("ANSIBLE_STDOUT_CALLBACK", "default")
@@ -61,7 +57,7 @@ def main() -> int:
         "--runtime",
         choices=SUPPORTED_RUNTIMES,
         default=None,
-        help="xray_runtime passed to molecule as --extra-vars (native|docker|podman). "
+        help="xray_runtime passed to molecule as --extra-vars (native|docker). "
              "When omitted, the value from config/settings.yml is used.",
     )
     parser.add_argument(
@@ -80,7 +76,6 @@ def main() -> int:
         )
         return 2
 
-    # scripts/test/local_test.py -> repo root (three levels up).
     repo_root = Path(__file__).resolve().parents[2]
     os.chdir(repo_root)
 

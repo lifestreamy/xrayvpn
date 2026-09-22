@@ -2,19 +2,18 @@
 galaxy_info:
   role_name: xray_vpn
   namespace: lifestreamy
-  author: lifestreamy
+  author: korelov.dev
   description: VLESS Xray Reality VPN server
   license: AGPL-3.0
   min_ansible_version: "2.14"
   platforms:
     - name: Ubuntu
       versions:
+        - jammy
         - noble
+    - name: Debian
+      versions:
+        - bookworm
   galaxy_tags: [vpn, xray, vless, reality]
-# NOTE: `dependencies:` is intentionally omitted. Ansible resolves role
-# dependencies through `roles_path` (not `collections_path`), so a missing
-# collection there breaks `ansible-playbook --syntax-check` even when the
-# collection is correctly installed under `~/.ansible/collections/`.
-# Production deploys should run:
-#   ansible-galaxy collection install community.general
-# (documented in the role's README / setup script).
+# `dependencies:` intentionally omitted (roles_path resolution breaks syntax-check);
+# install community.general separately — see README / setup script.

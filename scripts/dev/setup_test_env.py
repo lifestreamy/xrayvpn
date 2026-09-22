@@ -43,7 +43,7 @@ def main() -> int:
     print(f"[setup] Installing system packages: {' '.join(REQUIRED_APT)}")
     run(["sudo", "apt-get", "install", "-y", "-qq", *REQUIRED_APT])
 
-    # Docker group — — required so `docker ps` works without sudo.
+    # Docker group — required so `docker ps` works without sudo.
     groups = subprocess.run(["id", "-nG"], capture_output=True, text=True, check=True).stdout
     if "docker" not in groups.split():
         print(f"[setup] Adding {os.environ['USER']} to the docker group...")

@@ -1,13 +1,14 @@
-**Version:** v0.3 · **Last updated:** 2026-09-05
-
 [![English](https://img.shields.io/badge/English-808080?style=flat)](README.en.md)
 [![Русский](https://img.shields.io/badge/%D0%A0%D1%83%D1%81%D1%81%D0%BA%D0%B8%D0%B9-00a693?style=flat)](README.md)
 
----
-
 # Xray Reality VPN Server — развёртывание
 
-> Личный VPN-сервер на своём VPS (облачном сервере) — в минимальном варианте достаточно передать в параметрах только IP и пароль root пользователя. Автоматическая настройка VLESS Xray Reality VPN + Cloudflare Warp outbound (опционально) через Ansible. Генерирует и загружает в директорию проекта готовые .json/.yaml конфиги для Amnezia / Clash Verge / FlClash.
+> VLESS Xray Reality + опциональный исходящий Cloudflare WARP. Личный VPN-сервер на своём VPS
+> Ubuntu/Debian без покупки домена: достаточно IP и пароля root.
+> Консольный Python-клиент для всех платформ (Ubuntu/Debian/Arch | Windows | macOS): готовый файл
+> сборки или запуск из терминала; установка — pip, apt, Homebrew, winget, AUR.
+> Ядро развёртывания — Ansible. Готовые конфигурации клиентов (Amnezia / Clash Verge / FlClash)
+> генерируются и скачиваются к вам на машину. Дальше — [планы](docs/user/PLANNED.md).
 
 ## Содержание
 
@@ -16,9 +17,9 @@
 - [Для кого это](#для-кого-это)
 - [Что делает и в чём смысл](#что-делает-и-в-чём-смысл)
 - [Преимущества подхода](#преимущества-подхода)
-- [Где запускается](#где-запускается)
 - [Требования](#требования)
 - [Конфигурация](#конфигурация)
+- [Структура репозитория](#структура-репозитория)
 - [Клиенты](#клиенты)
 - [Подробная документация](#подробная-документация)
 - [Лицензия](#лицензия)
@@ -26,61 +27,67 @@
 
 ## Привет!
 
-Привет, это [Тим Корелов](https://github.com/lifestreamy). Делюсь своим решением для развёртывания персонального VPN, который и вы сами можете свободно и бесплатно использовать (исключительно для защиты персональных данных, естественно, и согласно всем законам). Не забудьте посмотреть правила лицензии. 
+Привет, это [Тим Корелов](https://korelov.dev). Делюсь собственным решением для развёртывания
+персонального VPN — можете свободно использовать его для защиты персональных данных (и согласно
+законам своей страны, разумеется...). Прочитайте правила лицензии.
 
 > [!TIP]
-> Если хочется сразу запустить — [Быстрый старт](#быстрый-старт).
+> [Быстрый старт](#быстрый-старт).
 
-Зачем я всё это сделал? Мой сервер — мои правила. Мне захотелось иметь свой личный VPN, где:
-- никто не слушает мой трафик и не логирует мои данные
-- не нужно покупать сервис у кого-то, кто может завтра упасть или поменять условия
-- я вижу своими глазами, что на моём сервере происходит и почему, а не доверяю на слово кому-то другому
-- я могу в любой момент обновить его компоненты и кастомизировать так, как захочу, например, добавить туннель, дополнительные сервисы
+Зачем я всё это сделал? Мой сервер — мои правила.
 
-Всё автоматизировал специально, чтобы можно было переиспользовать, и не настраивать руками каждый раз.
+- никто не слушает и не логирует; мне не нужно верить кому-то на слово, я полностью контролирую, что происходит на сервере, куда идёт трафик;
+- чужой сервис может в любой момент изменить условия или стать недоступным, особенно если у него большая база клиентов;
+- канал на чужом сервисе делится неравномерно, соединения пользователей влияют друг на друга;
+- можно в любой момент обновлять компоненты и настраивать сервис под себя.
 
-Остановился на Ansible — подробнее, почему, в блоке ниже.
+Всё автоматизировано, чтобы не настраивать руками каждый раз.
 
 <details>
-  <summary>Почему Ansible (подробности для технарей)</summary>
+<summary>Используется Ansible</summary>
 
-  Ansible — зрелый инструмент автоматизации. Он идемпотентен: повторный запуск не ломает состояние, приводит сервер к нужному виду. Он расширяемый — роли и плагины уже написаны и проверены, их не нужно писать заново. Он показывает, что именно меняется на каждом шаге, и ничего не трогает, пока не попросите. Он декларативен (но позволяет добавлять и императивные части). Вся логика уже написана: я только описываю желаемое состояние сервера через готовые модули.
+Почему:
 
-  Ansible запускается на вашей машине (в WSL на Windows — внутри него) и по SSH выполняет команды на сервере. На VPS он не устанавливается.
+- идемпотентен: повторный запуск не ломает сервер, а приводит его к нужному виду;
+- расширяется ролями и готовыми модулями;
+- показывает каждое изменение;
+- декларативен: вы описываете состояние, а не последовательность команд. При этом разрешает
+  императивный код.
 
+Ставится на VPS (remote-режим) или работает с вашей машины (local-режим, на Windows — через WSL).
 </details>
 
-Проект не просто протестирован разово — я (и множество других людей) пользуюсь им постоянно, так как делал его в первую очередь для себя и под себя. Если что-то ломается — оно ломается и у меня, поэтому я быстро вношу правки.
+Проект полностью покрыт автоматическими тестами для всех платформ, я провожу ручное тестирование и выверяю UI/UX перед каждым релизом, чтобы всё работало как надо и было удобным для пользователей; проверяю документацию на читаемость и понятность.
 
-Но если я что-то упустил, у вас что-то сломалось, не запускается изначально или есть пожелания — создайте новый issue.
+И, главное — сам постоянно пользуюсь этим приложением (т.н. "dogfooding"), поэтому поломки вижу сразу на себе и правлю.
 
-
+Нашли ошибку или что-то не запускается — создайте issue или попробуйте написать в discussions. Если перестал работать развёрнутый VPN —
+сначала [`docs/user/RUNBOOK.md`](docs/user/RUNBOOK.md).
 
 ## Быстрый старт
 
-Минимальный случай — только IP VPS. Пароль будет скрыто запрошен интерактивно.
+| Путь | Что нужно | Как | Комментарий |
+|---|---|---|---|
+| Портативное приложение | один скачанный файл, ставить ничего не надо | скачать из [Releases](https://github.com/lifestreamy/xrayvpn/releases/latest) и запустить (Windows — двойной клик), набрать `deploy` | консольное приложение |
+| Пакетные менеджеры | менеджер пакетов | `pip install xrayvpn`, apt, Homebrew, winget, AUR | установка одной командой |
+| Из репозитория | `uv` (поставит Python 3.12+) | `uv run --project python-client xrayvpn deploy` | запуск из исходников |
+| Shell-обёртки | Linux/WSL (bash) или Windows+WSL (PowerShell) | `provision-vpn.sh` / `Provision-VPN.ps1` | поддержка без развития |
+| Ansible напрямую | ansible-core 2.14+ и `community.general` | `ansible-playbook -i inventory.yml deploy.yml` | для технарей |
 
-Запустить можно тремя клиентами или вообще без них:
+Что нужно в любом случае: VPS (свежий Ubuntu 20.04+/Debian 11+, root/sudo, публичный IP) и
+SSH-доступ к нему — пароль или ключ. Инструкция по установке — [`docs/user/SETUP.md`](docs/user/SETUP.md).
 
-- `xrayvpn` (Python) — [`python-client/`](python-client/README.md) — Windows, Linux и macOS; рекомендуется;
-- Bash — [`shell-clients/bash/provision-vpn.sh`](shell-clients/bash/provision-vpn.sh) — Linux / WSL (поддерживается, но не развивается);
-- PowerShell — [`shell-clients/powershell/Provision-VPN.ps1`](shell-clients/powershell/Provision-VPN.ps1) — Windows + WSL;
-- напрямую Ansible — `ansible-playbook -i inventory.yml deploy.yml`, без клиента.
+Приложение консольное, но не пугайтесь: можете ошибаться с командами — ничего не сломается.
 
-### Про конфигурацию
-
-Минимально достаточно IP и пароля — всё остальное настроится само. Если нужно что-то поменять (число клиентов, WARP, порт, домен маскировки), дополнительная конфигурация производится через такие файлы:
-
-- `inventory.yml` — подключение к VPS (создаётся из `inventory.yml.example`).
-- `config/settings.yml` — параметры сервера: `num_clients`, `warp_enabled`, `xray_port`, `reality_camouflage_domain` и другие.
-- `deploy.yml` — точка входа playbook.
-
-Подробнее про каждый файл — в [`docs/SETUP.md`](docs/SETUP.md), раздел «Файлы конфигурации».
+- `ru` — русский интерфейс, `help` — основная помощь на выбранном языке.
+- `deploy` — главная команда, `deploy --help` — справка по ней. Без параметров `deploy` спросит
+  IP VPS и пароль (скрыто), покажет план и выполнит его после подтверждения.
+- `service` — состояние системы и развёртывания, например `service status`.
 
 <details>
-<summary>xrayvpn (Python) — команды</summary>
+<summary>Python-клиент из репозитория — команды</summary>
 
-Python-клиент `xrayvpn` работает одинаково на Windows, Linux и macOS; для удалённого режима WSL не нужен.
+Работает одинаково на Windows, Linux и macOS; для удалённого режима WSL не нужен.
 
 ```bash
 # Удалённый режим (VPS). Достаточно IP — пароль спросит скрыто.
@@ -88,35 +95,25 @@ uv run --project python-client xrayvpn deploy --execution remote --host 1.2.3.4
 uv run --project python-client xrayvpn deploy --execution remote --use-inventory
 ```
 
-Нет `uv`? Ставится одной командой: Windows — `powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"`, Linux/macOS — `curl -LsSf https://astral.sh/uv/install.sh | sh`.
+Нет `uv`? Windows: `powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"`,
+Linux/macOS: `curl -LsSf https://astral.sh/uv/install.sh | sh`.
 
-Остальное (`--pkey`, локальный режим, сценарии клиента) — в [`python-client/README.md`](python-client/README.md).
+Голой `xrayvpn` в PATH без префикса — `uv tool install --editable python-client` из корня
+репозитория; запускать из папки репозитория. Остальное — в [`python-client/README.md`](python-client/README.md).
 
 </details>
 
 <details>
-<summary>Bash — команды</summary>
+<summary>Shell-обёртки — команды</summary>
 
-На Windows должен быть доступен WSL с созданным образом Ubuntu/Debian — как проверить и настроить, в [`docs/SETUP.md`](docs/SETUP.md). Если Ubuntu в WSL установлен, в меню «Пуск» будет видна иконка. Если вы уже на Linux, то вам вряд ли нужно объяснять, как пользоваться терминалом. На Windows — найдите в поиске (Win + S) powershell или terminal.
+На Windows bash-обёртке нужен WSL с Ubuntu/Debian (откройте терминал: Win + S → «PowerShell» или
+«Terminal»; подробности — [`docs/user/SETUP.md`](docs/user/SETUP.md)).
 
 ```bash
 ./shell-clients/bash/provision-vpn.sh -H 1.2.3.4
 ./shell-clients/bash/provision-vpn.sh -H 1.2.3.4 --pkey ~/.ssh/id_rsa
 ./shell-clients/bash/provision-vpn.sh --use-inventory
 ```
-
-</details>
-
-<details>
-<summary>PowerShell — команды</summary>
-
-Как открыть командную строку: Пуск → наберите «PowerShell» → Enter. Перейдите в папку проекта:
-
-```powershell
-cd C:\путь\к\проекту
-```
-
-(вместо `C:\путь\к\проекту` подставьте реальный путь, куда распаковали файлы)
 
 ```powershell
 .\shell-clients\powershell\Provision-VPN.ps1 -HostName 1.2.3.4
@@ -126,32 +123,34 @@ cd C:\путь\к\проекту
 </details>
 
 <details>
-<summary>Напрямую Ansible — команды</summary>
+<summary>Ansible напрямую — команды</summary>
 
-Нужны ansible-core 2.14+ и коллекция `community.general`. Подготовьте `inventory.yml` из шаблона (команды — в разделе «Конфигурация» ниже):
+Нужны ansible-core 2.14+ и коллекция `community.general`. `inventory.yml` — из шаблона
+(`cp inventory.yml.example inventory.yml`, в PowerShell — `Copy-Item`).
 
 ```bash
-# Debian 12+ / Ubuntu 24.04: подойдёт apt. На Ubuntu 22.04 apt даёт 2.12 — только pip.
 pip install ansible-core
 ansible-galaxy collection install community.general
 ansible-playbook -i inventory.yml deploy.yml
 ```
 
-В этом режиме клиентские конфиги не скачиваются — они остаются на VPS в `/root/vpn-configs`.
-
 </details>
 
 ## Для кого это
 
-Для тех, кто хочет свой VPN и не готов полагаться на чужие сервисы. Не важно, разбираетесь вы в Ansible, Xray, VPN, серверах или нет — скрипт сделает всё сам. Если захотите копнуть глубже, технические детали — в раскрывающихся блоках и в [`docs/`](docs/GLOSSARY.md).
+Для тех, кто хочет свой VPN и не готов полагаться на чужие сервисы. Разбираетесь в Ansible, Xray
+и серверах или нет — скрипт сделает всё сам. Технические детали — в раскрывающихся блоках и в
+[`docs/user/GLOSSARY.md`](docs/user/GLOSSARY.md).
 
 ## Что делает и в чём смысл
 
-- Поднимает VPN-сервер на вашем VPS за один запуск скрипта.
-- Ваши данные проходят только через ваш сервер в зашифрованном виде, никто кроме вас не читает и не логирует их. На своём сервере вы уверены, что трафик видите только вы. В публичном VPN-сервисе такой уверенности нет, особенно если вы пользуетесь „бесплатным" тарифом.
-- Вы не зависите от провайдера VPN: его аптайма, условий, цены, других ограничений. Не делите канал с другими пользователями.
-- Полная кастомизация — это ваш сервер, вы решаете, какие функции вам нужны и в каком виде.
-- Генерирует готовые конфиги для клиентов: Clash Verge / FlClash / Amnezia.
+- Поднимает VPN-сервер на вашем VPS за один запуск.
+- Трафик идёт через ваш сервер в зашифрованном виде; никто его не читает и не логирует.
+  В публичном VPN-сервисе такой уверенности нет — особенно на «бесплатном» тарифе.
+- Вы не зависите от провайдера VPN: аптайма, цен, ограничений; канал не разделён с чужими
+  пользователями.
+- Сервер ваш: функции и настройки выбираете вы.
+- Генерирует готовые конфигурации клиентов: Clash Verge / FlClash / Amnezia.
 
 ```mermaid
 flowchart LR
@@ -161,111 +160,109 @@ flowchart LR
     C --> D
 ```
 
-Конечная цель — внешний сайт. Сайт видит IP вашего VPS (напрямую) или IP Cloudflare (через WARP).
+Конечная цель — внешний сайт. Он видит IP вашего устройства или провайдера при раздельном туннеле,
+IP вашего VPS — при обычном туннеле, IP Cloudflare — при включённом WARP.
 
-> В моих планах — мультиплатформенный клиент с простым интерфейсом, чтобы развёртывание и управление были ещё проще. Полный список планов — в [docs/PLANNED.md](docs/PLANNED.md).
+> В планах — визуальный клиент с простым интерфейсом. Список планов —
+> в [`docs/user/PLANNED.md`](docs/user/PLANNED.md).
 
 <details>
   <summary>Подробности для технарей</summary>
 
-  Реальный стек: Ansible-роль `roles/xray_vpn/`, шаблоны Jinja2,
-  Docker-образ `teddysun/xray:26.6.27`, персистентное состояние
-  `/root/xray-config/reality-state.json`. Транспорт — VLESS + REALITY
-  (модифицированный TLS 1.3, X25519). Опционально — исходящий туннель
-  через Cloudflare WARP.
+  Реальный стек: Ansible-роль `roles/xray_vpn/`, шаблоны Jinja2, Docker-образ
+  `teddysun/xray:26.6.27`, персистентное состояние `/root/xray-config/reality-state.json`.
+  Транспорт — VLESS + REALITY (модифицированный TLS 1.3, X25519). Опционально — исходящий
+  туннель через Cloudflare WARP.
 
 </details>
 
 ## Преимущества подхода
 
-Xray VLESS + REALITY не требует своего домена и TLS-сертификата. Сервер маскируется под чужой легитимный сайт (`reality_camouflage_domain`, по умолчанию `dl.google.com`). Это снимает главный барьер для самостоятельной настройки VPN: не нужно покупать домен, получать и продлевать сертификат, настраивать DNS.
+Xray VLESS + REALITY не требует своего домена и TLS-сертификата: сервер маскируется под легитимный
+сайт (`reality_camouflage_domain`, по умолчанию `dl.google.com`). Не нужно покупать домен,
+получать и продлевать сертификат, настраивать DNS.
 
-Ядро сервера — [Xray-core](https://github.com/XTLS/Xray-core). По умолчанию устанавливается нативно как `/usr/local/xray/xray` под управлением systemd (вариант `xray_runtime: native` в `config/settings.yml` — наименьший footprint, рекомендуемый). Доступны также варианты `docker` (легаси-путь через Docker Engine) и `podman` (experimental; не покрыт molecule-тестами). Стек: VLESS + REALITY.
-
-От вас нужно три вещи: 
-- купить VPS (Ubuntu 20.04+ или Debian 11+) — могу подсказать проверенных провайдеров, буду признателен за регистрацию по моей реферальной ссылке
-- скачать файлы проекта 
-- запустить клиент или playbook — команды в разделе [«Быстрый старт»](#быстрый-старт) выше. 
-
-> Получить файлы можно так: кнопка **Code → Download ZIP** на странице репозитория, либо архив исходников в разделе **Releases** (справа). Дальше клиент развернёт Xray на VPS, сгенерирует клиентские конфиги и скачает их к вам. В удалённом режиме окружение для Ansible создаётся прямо на сервере — локально ничего ставить не нужно. Знание Ansible, SSH или Xray не требуется. НО потребуется базовое умение пользоваться командной строкой для запуска клиента с параметрами.
-
-WARP outbound через Cloudflare включается одной строкой (`warp_enabled: true` в `config/settings.yml`). С ним сайты видят IP Cloudflare вместо IP вашего VPS.
-
-Перед оплатой VPS на длительный срок проверьте его через [`carrox-vps-check`](https://github.com/AiCarrox/carrox-vps-check) или похожий инструмент. Подробности — в [`docs/TEST-VPS.md`](docs/TEST-VPS.md).
-
-## Где запускается
-
-Пути запуска и требования по платформам — в «Быстром старте» выше.
+Ядро — [Xray-core](https://github.com/XTLS/Xray-core). По умолчанию ставится нативно
+(`/usr/local/xray/xray`, systemd, `xray_runtime: native` — минимальный footprint, рекомендуемый);
+есть `docker`-вариант.
 
 ## Требования
 
-**VPS:** свежий Ubuntu 20.04+ или Debian 11+, root или sudo, публичный IP.
+**VPS:** свежий Ubuntu 20.04+ или Debian 11+, root или sudo, публичный IP. Подскажу проверенных
+провайдеров — буду признателен за регистрацию по моей реферальной ссылке.
 
-**Локальная машина:**
+**Ваша машина:** для портативного приложения — ничего; для пакетных менеджеров — сам менеджер; для
+репозитория — `uv` (поставит Python 3.12+); для shell-обёрток — Linux/WSL (на Windows — WSL2
+с Ubuntu/Debian). SSH-доступ к VPS — по ключу или паролю (встроенный `paramiko`, `sshpass` не нужен).
 
-- Python 3.12+ для основного клиента `xrayvpn` (установка/запуск — через `uv`, см. [`python-client/README.md`](python-client/README.md)); SSH-доступ к VPS по ключу или паролю (используется встроенный `paramiko` — `sshpass` не нужен).
-- Для альтернативных shell-клиентов: Linux/WSL с `apt`; на Windows — WSL2 с Ubuntu/Debian.
+Серверу не нужен GitHub и git: playbook и роли передаются на VPS одним архивом по SSH — клонирование
+на сервере не делается.
 
-Обёртка сама доустановит Python 3, Ansible и `sshpass`, если их нет. На Windows нужен только WSL.
+WARP включён по умолчанию; отключить — `--no-warp` при развёртывании. В репозитории/Ansible то же
+задаётся как `warp_enabled` в `config/settings.yml`.
+
+Перед оплатой VPS на долгий срок проверьте его — [`docs/user/TEST-VPS.md`](docs/user/TEST-VPS.md).
 
 ## Конфигурация
 
-Два способа:
+Раздел для продвинутых. Минимум — IP и пароль, остальное по умолчанию. Параметры подключения:
 
-- **CLI-параметры** — `--pkey` или `--pass` (взаимоисключающие). Если ни один не задан — пароль спросит скрыто.
-- **Inventory-файл** — `inventory.yml` + `--use-inventory` (`-UseInventory` в PowerShell). Shell-клиенты умеют и произвольный путь: `--inventory PATH` (`-Inventory <path>`). Подробности режимов — в [`docs/SETUP.md`](docs/SETUP.md), раздел «CLI-флаги `xrayvpn deploy`».
+- CLI-флагами: `-H/--host`, `-u/--user`, `-p/--port`, `--pkey` или `--pass` (взаимоисключающие,
+  без них — скрытый запрос). Алиас хоста из `~/.ssh/config` работает как в ssh.
+- Через `inventory.yml` и `--use-inventory`: создайте из шаблона
+  (`cp inventory.yml.example inventory.yml`, в PowerShell — `Copy-Item`), заполните `ansible_host`,
+  `ansible_user`, `ansible_port` и `ansible_ssh_private_key_file` или `ansible_ssh_pass`.
+  Файл в `.gitignore` — личные данные в git не попадут.
 
-Для режима `--use-inventory` нужен файл `inventory.yml` в корне проекта. В репозитории лежит шаблон `inventory.yml.example` — скопируйте его и заполните своими данными:
+Параметры сервера (число клиентов, WARP, порт, домен маскировки) — `config/settings.yml`.
+Подробнее — [`docs/user/SETUP.md`](docs/user/SETUP.md).
 
-```bash
-cp inventory.yml.example inventory.yml
-```
-
-Windows PowerShell — аналог команды:
-
-```powershell
-Copy-Item inventory.yml.example inventory.yml
-```
-
-Заполните `ansible_host`, `ansible_user`, `ansible_port` и один из двух: `ansible_ssh_private_key_file` или `ansible_ssh_pass`. Файл `inventory.yml` в `.gitignore` — личные данные в git не уйдут.
-
-CLI-режим (`-H` без `--use-inventory`) файл `inventory.yml` не использует — скрипт сам соберёт нужный inventory во временной папке на время запуска.
-
-Это — способы передать параметры подключения. Остальная конфигурация (число клиентов, WARP, порт, домен маскировки) задаётся в `config/settings.yml` — подробнее в [`docs/SETUP.md`](docs/SETUP.md), раздел «Файлы конфигурации».
+Пользовательские файлы портативного приложения лежат рядом с ним: `config/settings.yml` и
+`inventory.yml` подхватываются из папки приложения (или `$XRAYVPN_HOME`) и перекрывают встроенные
+значения.
 
 ## Структура репозитория
 
-- `python-client/` — основной клиент (Python, CLI `xrayvpn`): локальный и удалённый режимы.
-- `shell-clients/` — альтернативные shell-клиенты: Bash и PowerShell (поддерживаются, но не развиваются).
-- `scripts/` — инструменты разработчика: настройка тестового окружения и локальные тесты.
-- `config/`, `roles/`, `deploy.yml` — Ansible-проект (конфигурация, роль, точка входа playbook).
+- `python-client/` — основной клиент (Python, CLI `xrayvpn`) и standalone-сборки;
+- `shell-clients/` — Bash и PowerShell-обёртки (поддержка без развития);
+- `scripts/` — инструменты разработки;
+- `config/`, `roles/`, `deploy.yml` — Ansible-проект;
+- `docs/user/` и `docs/dev/` — документация (см. ниже).
 
 ## Клиенты
 
-Я пользуюсь Clash Verge (Windows) и FlClash (Android). Amnezia работает, но из-за нестабильности рекомендую Mihomo-клиенты. Таблица про то, что я проверил сам, а что нет — [`docs/CLIENT-STATUS.md`](docs/CLIENT-STATUS.md).
+Пользуюсь Clash Verge (Windows) и FlClash (Android). Amnezia работает, но нестабилен — рекомендую
+Mihomo-клиенты. Что и где проверено — [`docs/user/CLIENT-STATUS.md`](docs/user/CLIENT-STATUS.md).
 
 ## Подробная документация
 
-- [`docs/SETUP.md`](docs/SETUP.md) — настройка, переменные `config/settings.yml`, WARP, проверка после развёртывания.
-- [`docs/ROTATION.md`](docs/ROTATION.md) — смена ключей и UUID клиентов.
-- [`docs/TEST-VPS.md`](docs/TEST-VPS.md) — проверка VPS перед оплатой.
-- [`docs/GLOSSARY.md`](docs/GLOSSARY.md) — термины проекта.
-- [`docs/CLIENT-STATUS.md`](docs/CLIENT-STATUS.md) — статус клиентов.
-- [`docs/PLANNED.md`](docs/PLANNED.md) — что запланировано дальше.
-- [`docs/RELEASE.md`](docs/RELEASE.md) — релизная политика и статусы релизов.
-- [`CHANGELOG.md`](CHANGELOG.md) — что менялось по версиям.
+Пользователю:
+
+- [`docs/user/SETUP.md`](docs/user/SETUP.md) — установка и первый запуск;
+- [`docs/user/RUNBOOK.md`](docs/user/RUNBOOK.md) — VPN перестал работать: по шагам;
+- [`docs/user/ROTATION.md`](docs/user/ROTATION.md) — смена ключей и клиентов;
+- [`docs/user/TEST-VPS.md`](docs/user/TEST-VPS.md) — проверка VPS перед оплатой;
+- [`docs/user/GLOSSARY.md`](docs/user/GLOSSARY.md) — термины;
+- [`docs/user/PLANNED.md`](docs/user/PLANNED.md) — что появится дальше.
+
+Разработчику:
+
+- [`docs/dev/RELEASE.md`](docs/dev/RELEASE.md) — релизная политика;
+- [`docs/dev/TEST-LOCAL.md`](docs/dev/TEST-LOCAL.md) — локальный сквозной тест;
+- [`CHANGELOG.md`](CHANGELOG.md) — история версий;
+- [`python-client/README.md`](python-client/README.md) и [`python-client/BUILD.md`](python-client/BUILD.md)
+  — клиент и его сборка.
 
 ## Лицензия
 
-AGPL-3.0 с дополнительным ограничением коммерческого использования.
-
-Свободно для личного использования и некоммерческого распространения. Коммерческое использование — только с моего письменного разрешения: **tim.korelov@yandex.com**.
-
-Полный текст — в [`LICENSE`](LICENSE) (English). Краткое описание на русском — в [`LICENSE.ru.md`](LICENSE.ru.md).
+AGPL-3.0 с дополнительным ограничением коммерческого использования. Свободно для личного
+использования и некоммерческого распространения. Коммерческое использование — только с моего
+письменного разрешения: **tim.korelov@yandex.com**. Полный текст — в [`LICENSE`](LICENSE)
+(English), краткое описание на русском — в [`LICENSE.ru.md`](LICENSE.ru.md).
 
 ## Автор и контакты
 
-Tim Korelov — https://github.com/lifestreamy
+Tim Korelov — https://korelov.dev
 
 Почта: **tim.korelov@yandex.com**
-Telegram: **@timkore** (рабочий) — по вопросам этого проекта, с предложениями поработать вместе, приглашениями и т. п.
+Telegram: **@timkore** (рабочий) — по вопросам проекта, предложениям о работе и приглашениям.

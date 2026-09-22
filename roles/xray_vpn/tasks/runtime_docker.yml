@@ -1,7 +1,5 @@
 ---
-# Docker runtime — install Docker Engine, ensure the service, and pull
-# the pinned Xray container image. Used when xray_runtime == 'docker'
-# (legacy escape hatch; new deployments should use xray_runtime: native).
+# Docker runtime — legacy escape hatch; new deployments use xray_runtime: native.
 
 - name: Install Docker from Ubuntu repos
   ansible.builtin.apt:

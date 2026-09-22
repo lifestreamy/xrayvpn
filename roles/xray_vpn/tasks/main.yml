@@ -1,60 +1,51 @@
 ---
-# Assert runtime selector — fail early on invalid values.
-- name: Assert xray_runtime is one of native|docker|podman
+- name: Assert xray_runtime is one of native|docker
   ansible.builtin.assert:
     that:
-      - xray_runtime in ['native', 'docker', 'podman']
+      - xray_runtime in ['native', 'docker']
     fail_msg: >-
       xray_runtime={{ xray_runtime | default('UNDEFINED') }} is not supported.
-      Set xray_runtime in config/settings.yml to one of: native, docker, podman.
+      Set xray_runtime in config/settings.yml to one of: native, docker.
     success_msg: "xray_runtime={{ xray_runtime }} selected"
 
-# Common setup: apt deps + set_fact xray_cli_command / xray_container_image.
 - name: Include runtime setup
   ansible.builtin.import_tasks: runtime_setup.yml
   tags: runtime
 
-# Runtime-specific install: docker engine / native tarball / podman engine.
-# Must run BEFORE keys.yml — keygen invokes {{ xray_cli_command }}, which
-# needs the engine (docker/podman) or the native binary in place.
+# Must run BEFORE keys.yml: keygen invokes {{ xray_cli_command }}.
 - name: Include runtime-specific install
   ansible.builtin.import_tasks: "runtime_{{ xray_runtime }}.yml"
   tags: runtime
 
-# REALITY identity persistence — single runtime-aware keygen (uses
-# {{ xray_cli_command }} so the same path serves native/docker/podman).
+- name: Include log retention setup
+  ansible.builtin.import_tasks: logs.yml
+  tags: logs
+
 - name: Include REALITY keys
   ansible.builtin.import_tasks: keys.yml
   tags: keys
 
-# Prepare optional Cloudflare WARP outbound settings before rendering Xray config
 - name: Include WARP tasks
   ansible.builtin.import_tasks: warp.yml
   when: warp_enabled | default(false) | bool
   tags: warp
 
-# Configure firewall (skip if xray_manage_firewall=false; e.g. molecule scenario)
-# Bare-VPS policy: the firewall tool must exist before we manage rules.
-# Debian-family only (role contract); idempotent no-op when present. Never
-# `ufw enable` here — rule management on an inactive firewall is harmlessly
-# inert and the operator keeps control of activation.
-- name: Ensure ufw is installed
-  ansible.builtin.apt:
-    name: ufw
-    state: present
-    update_cache: true
-  when: xray_manage_firewall | default(true) | bool
-  tags: firewall
+# ufw allow-if-present (never installed here); never runs `ufw enable`.
+- name: Detect ufw
+  ansible.builtin.stat:
+    path: /usr/sbin/ufw
+  register: xray_vpn_ufw_stat
+  when: xray_manage_ufw | default(true) | bool
+  tags: ufw
 
-- name: Allow Xray port in firewall
+- name: Allow Xray port in ufw
   community.general.ufw:
     rule: allow
     port: '{{ xray_port }}'
     proto: tcp
-  when: xray_manage_firewall | default(true) | bool
-  tags: firewall
+  when: xray_manage_ufw | default(true) | bool and xray_vpn_ufw_stat.stat.exists | default(false)
+  tags: ufw
 
-# Create directories
 - name: Create Xray config directory
   ansible.builtin.file:
     path: "{{ xray_config_dir }}"
@@ -82,7 +73,6 @@
   when: xray_debug | default(false) | bool
   tags: config,debug
 
-# Backup existing config before overwriting
 - name: Stat existing Xray config
   ansible.builtin.stat:
     path: "{{ xray_config_dir }}/config.json"
@@ -93,13 +83,12 @@
 - name: Backup Xray config before overwrite
   ansible.builtin.copy:
     src: "{{ xray_config_dir }}/config.json"
-    dest: "{{ xray_config_dir }}/config.json.bak-{{ ansible_date_time.date }}-{{ ansible_date_time.time }}"
+    dest: "{{ xray_config_dir }}/config.json.bak-{{ ansible_facts['date_time']['date'] }}-{{ ansible_facts['date_time']['time'] }}"
     remote_src: true
     mode: '0600'
   when: xray_backup_enabled | default(true) and xray_config_stat.stat.exists
   tags: config,backup
 
-# Create Xray configuration
 - name: Create Xray config file
   ansible.builtin.template:
     src: xray_config.json.j2
@@ -108,7 +97,6 @@
   notify: Restart xray
   tags: config
 
-# Backup existing systemd unit before overwriting
 - name: Stat existing xray systemd unit
   ansible.builtin.stat:
     path: /etc/systemd/system/xray.service
@@ -119,13 +107,12 @@
 - name: Backup xray systemd unit before overwrite
   ansible.builtin.copy:
     src: /etc/systemd/system/xray.service
-    dest: "/etc/systemd/system/xray.service.bak-{{ ansible_date_time.date }}-{{ ansible_date_time.time }}"
+    dest: "/etc/systemd/system/xray.service.bak-{{ ansible_facts['date_time']['date'] }}-{{ ansible_facts['date_time']['time'] }}"
     remote_src: true
     mode: '0600'
   when: xray_backup_enabled | default(true) and xray_unit_stat.stat.exists
   tags: service,backup
 
-# Create Xray systemd service file (runtime-specific: native|docker|podman)
 - name: Create Xray systemd service
   ansible.builtin.template:
     src: "xray.service.{{ xray_runtime }}.j2"
@@ -136,11 +123,7 @@
     - Restart xray
   tags: service
 
-# Enable the unit for boot (all runtimes) and start it if not running.
-# No daemon_reload here on purpose: unit-file changes already notify the
-# "Reload systemd" / "Restart xray" handlers below; re-passing the flag on
-# every converge churns systemd state. `state: started` is the idempotent
-# first-deploy safety net (handler restarts only fire when files change).
+# No daemon_reload here: unit changes notify the handlers; state:started is the first-deploy net.
 - name: Enable and start xray service at boot
   ansible.builtin.systemd:
     name: xray
@@ -149,7 +132,6 @@
   become: true
   tags: service
 
-# Export client configs
 - name: Generate client configs
   ansible.builtin.template:
     src: client_config.json.j2
@@ -160,7 +142,6 @@
   when: xray_vpn_client_uuids is defined
   tags: config
 
-# Export Clash Verge / FlClash client configs (Mihomo Meta YAML)
 - name: Generate Clash Meta YAML client configs
   ansible.builtin.template:
     src: clash_meta.yaml.j2
@@ -175,7 +156,14 @@
     msg: "VPN config files exported to {{ xray_client_configs_dir }}/"
   tags: config
 
-# Post-deploy smoke checks (non-fatal)
+- name: Include xray-obs black-box timer
+  ansible.builtin.import_tasks: obs.yml
+  tags: obs
+
+- name: Include xray-watchdog timer
+  ansible.builtin.import_tasks: watchdog.yml
+  tags: watchdog
+
 - name: Run smoke checks
   ansible.builtin.import_tasks: smoke.yml
   tags: smoke,always

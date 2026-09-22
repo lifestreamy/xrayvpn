@@ -1,0 +1,19 @@
+---
+# journald retention: xray keeps logging to stdout, journald persists/caps on disk.
+
+- name: Ensure journald drop-in directory exists
+  ansible.builtin.file:
+    path: /etc/systemd/journald.conf.d
+    state: directory
+    mode: '0755'
+  become: true
+  tags: logs
+
+- name: Deploy journald retention drop-in
+  ansible.builtin.template:
+    src: journald-60-xray-ansible.conf.j2
+    dest: /etc/systemd/journald.conf.d/60-xray-ansible.conf
+    mode: '0644'
+  become: true
+  notify: Restart journald
+  tags: logs

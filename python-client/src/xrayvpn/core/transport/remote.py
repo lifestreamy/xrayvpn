@@ -7,12 +7,17 @@ shell clients' `StrictHostKeyChecking=no` (AutoAddPolicy) — a stated trade-off
 
 from __future__ import annotations
 
+import socket
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Protocol, Self
 
 import paramiko
 from fabric import Connection
+
+
+class SshConnectError(RuntimeError):
+    """Human-readable SSH connect/auth failure (never a raw paramiko traceback)."""
 
 
 @dataclass
@@ -36,6 +41,8 @@ class Remote(Protocol):
         sudo: bool = False,
         warn: bool = True,
         env: dict[str, str] | None = None,
+        hide: bool = False,
+        out_stream: object | None = None,
     ) -> CommandResult: ...
 
     def put(self, local: str | Path, remote: str) -> None: ...
@@ -63,6 +70,9 @@ class FabricRemote:
             connect_kwargs["password"] = password
         if key_filename is not None:
             connect_kwargs["key_filename"] = str(Path(key_filename).expanduser())
+        self._host = host
+        self._user = user
+        self._port = port
         self._conn = Connection(
             host=host,
             user=user,
@@ -73,10 +83,24 @@ class FabricRemote:
         self._open = False
 
     def _ensure_open(self) -> None:
-        if not self._open:
+        if self._open:
+            return
+        target = f"{self._user}@{self._host}:{self._port}"
+        try:
             self._conn.client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
             self._conn.open()
-            self._open = True
+        except paramiko.AuthenticationException as exc:
+            raise SshConnectError(
+                f"SSH authentication failed for {target} (check the key or password): {exc}"
+            ) from exc
+        except paramiko.SSHException as exc:
+            raise SshConnectError(
+                f"SSH connection to {target} failed: {exc} "
+                "(the endpoint did not speak SSH — check host/port)"
+            ) from exc
+        except (socket.gaierror, TimeoutError, ConnectionError, OSError) as exc:
+            raise SshConnectError(f"SSH connection to {target} failed: {exc}") from exc
+        self._open = True
 
     def run(
         self,
@@ -85,10 +109,15 @@ class FabricRemote:
         sudo: bool = False,
         warn: bool = True,
         env: dict[str, str] | None = None,
+        hide: bool = False,
+        out_stream: object | None = None,
     ) -> CommandResult:
         self._ensure_open()
         runner = self._conn.sudo if sudo else self._conn.run
-        result = runner(command, warn=warn, env=env)
+        kwargs: dict[str, object] = {"warn": warn, "env": env, "hide": hide}
+        if out_stream is not None:
+            kwargs["out_stream"] = out_stream
+        result = runner(command, **kwargs)
         return CommandResult(
             return_code=result.exited,
             stdout=result.stdout or "",

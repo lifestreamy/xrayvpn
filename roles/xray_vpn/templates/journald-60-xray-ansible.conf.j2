@@ -1,0 +1,6 @@
+# Managed by the xray-ansible role; editing by hand will be overwritten on the next deploy.
+# The cap applies to the whole host journal, not only xray.
+[Journal]
+Storage=persistent
+SystemMaxUse={{ xray_journal_max_use | default('120M') }}
+MaxRetentionSec={{ xray_journal_retention_days | default(3) }}day

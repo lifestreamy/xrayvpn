@@ -24,6 +24,23 @@ def test_local_inventory_connection(tmp_path) -> None:
     assert data["all"]["vars"] == {"xray_runtime": "native"}
 
 
+def test_ssh_inventory_host_params() -> None:
+    content = build_inventory(
+        {},
+        connection="ssh",
+        host_params={
+            "ansible_host": "203.0.113.7",
+            "ansible_user": "root",
+            "ansible_port": "22",
+            "ansible_ssh_private_key_file": "/home/tim/.ssh/id",
+        },
+    )
+    host = yaml.safe_load(content)["all"]["hosts"]["vpn"]
+    assert host["ansible_connection"] == "ssh"
+    assert host["ansible_host"] == "203.0.113.7"
+    assert host["ansible_ssh_private_key_file"] == "/home/tim/.ssh/id"
+
+
 def test_server_inventory_interpreter() -> None:
     content = build_inventory(
         {"warp_enabled": False},

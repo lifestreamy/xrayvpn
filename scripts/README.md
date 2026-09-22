@@ -1,13 +1,14 @@
-# Developer tooling (contributor scripts)
+# Тулинг для разработки
 
-Loose scripts for repository contributors and CI. Not part of the Python
-client product (`python-client/` holds the application) and not part of the
-user-facing shell clients (`shell-clients/`).
+> English version: [README.en.md](README.en.md).
 
-| Directory | Purpose |
+Отдельные скрипты контрибьюторов и CI. Не основное приложение xrayvpn — оно в `python-client/`,
+пользовательские shell-клиенты — в `shell-clients/`.
+
+| Каталог | Назначение |
 |---|---|
-| `dev/` | local development environment setup (`setup_test_env.py`) |
-| `test/` | local verification runs (`local_test.py`) |
+| `dev/` | подготовка локальной среды разработки (`setup_test_env.py`) |
+| `test/` | проверочные прогоны на локальной машине (`local_test.py`) |
 
-Both scripts are plain Python 3 (stdlib only) and are idempotent. They run
-against the test venv in WSL (`~/xray-venv`, see `docs/TEST-LOCAL.md`).
+Оба скрипта — чистый Python 3, только stdlib, идемпотентны. Работают против тестового
+venv в WSL (`~/xray-venv`, см. [`docs/dev/TEST-LOCAL.md`](../docs/dev/TEST-LOCAL.md)).

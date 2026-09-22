@@ -10,6 +10,7 @@ downloaded-configs/
 downloaded-clients/
 inventory.yml
 .xrayvpn-inventory.yml
+.xrayvpn-fetch-playbook.yml
 
 # VS Code
 .vscode/
@@ -25,6 +26,11 @@ Thumbs.db
 # --- Python extras ---
 .ruff_cache/
 .pytest_cache/
+
+# --- Binary builds ---
+python-client/build/
+python-client/dist/
+python-client/dist-binary/
 
 # --- Env files (any project) ---
 .env

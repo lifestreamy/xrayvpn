@@ -1,23 +1,10 @@
 ---
-# ---
-# Post-converge e2e: stand up a mihomo client inside the same container,
-# tunnel through the just-deployed Xray server, and assert the connection.
-# This is the in-container equivalent of the manual checks in docs/TEST-LOCAL.md.
-#
-# Structure: a flat TASK list (not a full play) so it can be imported via
-# `import_tasks: e2e.yml` from verify.yml. `hosts:` and `become:` are inherited
-# from the calling play.
+# Post-converge e2e: mihomo client tunnels through the deployed Xray; asserts generate_204.
+# Flat task list — import via import_tasks from verify.yml.
 
 - name: Capture e2e start timestamp (RFC3339 UTC; used as journalctl --since anchor)
   ansible.builtin.set_fact:
     e2e_start_ts: "{{ ansible_date_time.iso8601 }}"
-
-# === Runtime-aware pre-flight: confirm Xray is actually accepting TCP 443 ===
-# For the native scenario the listener is on the host's localhost:443 (xray
-# installed natively, bound via systemd). For docker/podman the listener is
-# the container's localhost:443 (also reachable from the host in a delegated
-# scenario where the role is applied locally). Either way: wait_for 443 is
-# the universal gate before the mihomo handshake.
 
 - name: Pre-flight | ensure Xray service is started (native)
   ansible.builtin.shell:
@@ -38,7 +25,7 @@
     timeout: 30
     delay: 1
 
-- name: Pre-flight | assert Xray service is active (native) / container running (docker/podman)
+- name: Pre-flight | assert Xray service is active (native) / container running (docker)
   ansible.builtin.shell:
     cmd: |
       if [ "{{ xray_runtime }}" = "native" ]; then
@@ -123,9 +110,7 @@
     replace: "  mode: global"
 
 - name: Validate adapted clash config (mihomo -t)
-  # -f must be an absolute path: when nohup heredoc runs without a real cwd,
-  # mihomo treats `-f` as relative-to-cwd and falls back to its generated
-  # initial config if the file is not found. The path is fixed in this task.
+  # -f must be absolute: mihomo silently falls back to its generated config otherwise.
   ansible.builtin.command:
     cmd: "/usr/local/bin/mihomo -t -f /root/vpn-configs/e2e/clash_e2e.yaml"
   register: mihomo_test
@@ -149,10 +134,7 @@
     delay: 1
 
 - name: Hard-assert generate_204 via mihomo mixed-port to Xray to internet
-  # We use `command` (curl) instead of `ansible.builtin.uri` because the latter
-  # returns a dict whose status field name varies across Ansible versions and can
-  # be missing on some short-circuit paths. curl with `-w '%{http_code}'`
-  # guarantees a stable integer.
+  # curl -w '%{http_code}' gives a stable integer; uri status field varies across versions.
   ansible.builtin.command:
     cmd: >
       curl --silent --show-error --max-time 15

@@ -12,6 +12,7 @@ from xrayvpn.core.config import find_repo_root, load_settings, merge_overrides
 def _make_repo(tmp_path: Path) -> Path:
     repo = tmp_path / "repo"
     (repo / "config").mkdir(parents=True)
+    (repo / "roles" / "xray_vpn").mkdir(parents=True)
     (repo / "config" / "settings.yml").write_text(
         "one: 1\ntwo: 2\n", encoding="utf-8"
     )

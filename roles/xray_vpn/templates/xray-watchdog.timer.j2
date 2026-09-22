@@ -1,0 +1,10 @@
+[Unit]
+Description=Xray egress watchdog cycle
+
+[Timer]
+OnBootSec=1min
+OnUnitActiveSec=90s
+AccuracySec=30s
+
+[Install]
+WantedBy=timers.target

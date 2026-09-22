@@ -4,7 +4,7 @@ set -euo pipefail
 VERSION="v2026-09-04" # YYYY-MM-DD
 LICENSE="AGPL-3.0 + commercial-use restriction"
 AUTHOR="Tim Korelov"
-CONTACT_URL="https://github.com/lifestreamy"
+CONTACT_URL="https://korelov.dev"
 
 show_banner() {
     echo "=== Xray VPN Provisioning Script (Clash Verge, FlClash, Amnezia) (${VERSION}) ==="
@@ -71,6 +71,19 @@ Cleanup options:
   --full-cleanup       Remove temporary workspace AND any packages installed by this script.
   --no-cleanup         Keep the temporary workspace for debugging/inspection.
 
+Rotation options:
+  --rotate             Regenerate the REALITY identity (xray_reality_rotate=true);
+                       the old state is backed up on the server before rotation.
+  --no-rotate          Explicitly keep the existing REALITY identity (default behavior).
+
+Deployment options (override config/settings.yml):
+  --runtime VALUE      xray_runtime: native | docker.
+  --warp               Force-enable the Cloudflare WARP outbound (warp_enabled=true).
+  --no-warp            Force-disable the Cloudflare WARP outbound (warp_enabled=false).
+  --xray-port VALUE    VLESS inbound TCP port (default: 443).
+  --num-clients VALUE  Number of client configs to generate.
+  --camouflage-domain VALUE  REALITY SNI camouflage domain.
+
 Other:
   -h, --help           Show this help message and exit.
   --dry-run            Simulate actions without changing the system.
@@ -91,6 +104,8 @@ Examples:
   # All options
   provision-vpn.sh -H 192.168.1.100 -u admin -p 2222 --pkey ~/.ssh/vps_key \
     --clients-dir ~/vpn-configs --full-cleanup --dry-run --verbose
+  provision-vpn.sh -H 1.2.3.4 --pkey ~/.ssh/id_rsa \
+    --runtime docker --no-warp --xray-port 8443 --num-clients 5 --camouflage-domain www.lovelive.anime.moe
 
   # Inventory mode
   provision-vpn.sh --use-inventory --full-cleanup --clients-dir ~/vpn-configs
@@ -170,6 +185,12 @@ CLI_CONN_FLAG=0
 ANSIBLE_VERBOSE_LEVEL=0
 ANSIBLE_VERBOSITY_LABEL="default"
 Xray_DEBUG=0
+ROTATE=""
+RUNTIME=""
+WARP=""
+XRAY_PORT_VALUE=""
+NUM_CLIENTS=""
+CAMOUFLAGE=""
 
 CLIENTS_DIR=""
 HOST=""
@@ -227,6 +248,50 @@ while [[ $# -gt 0 ]]; do
             ANSIBLE_VERBOSITY_LABEL="verbose"
             Xray_DEBUG=1
             shift
+            ;;
+        --rotate)
+            ROTATE="true"
+            shift
+            ;;
+        --no-rotate)
+            ROTATE="false"
+            shift
+            ;;
+        --runtime)
+            RUNTIME="$2"
+            if [[ "$RUNTIME" != native && "$RUNTIME" != docker ]]; then
+                echo "Error: --runtime must be 'native' or 'docker'." >&2
+                exit 1
+            fi
+            shift 2
+            ;;
+        --warp)
+            WARP="true"
+            shift
+            ;;
+        --no-warp)
+            WARP="false"
+            shift
+            ;;
+        --xray-port)
+            XRAY_PORT_VALUE="$2"
+            if ! [[ "$XRAY_PORT_VALUE" =~ ^[0-9]+$ ]]; then
+                echo "Error: --xray-port expects a TCP port number." >&2
+                exit 1
+            fi
+            shift 2
+            ;;
+        --num-clients)
+            NUM_CLIENTS="$2"
+            if ! [[ "$NUM_CLIENTS" =~ ^[1-9][0-9]*$ ]]; then
+                echo "Error: --num-clients expects a positive integer." >&2
+                exit 1
+            fi
+            shift 2
+            ;;
+        --camouflage-domain)
+            CAMOUFLAGE="$2"
+            shift 2
             ;;
         -h|--help)
             show_help
@@ -407,7 +472,7 @@ else
     CLI_INVENTORY="$WORK_DIR/inventory.yml"
     EXTRA_IGNORED=""
     if [[ -f "$REPO_ROOT/inventory.yml" ]]; then
-        EXTRA_IGNORED=$( { grep -E '^[[:space:]]*[A-Za-z0-9_]+:[[:space:]]*[^[:space:]]' "$REPO_ROOT/inventory.yml" || true; } | grep -Ev '^[[:space:]]*(ansible_host|ansible_user|ansible_port|ansible_ssh_private_key_file|ansible_ssh_pass):' | sed 's/^[[:space:]]*//; s/:.*//' | sort -u | tr '\n' ' ')
+        EXTRA_IGNORED=$( { grep -E '^[[:space:]]*[A-Za-z0-9_]+:[[:space:]]*[^[:space:]]' "$REPO_ROOT/inventory.yml" || true; } | { grep -Ev '^[[:space:]]*(ansible_host|ansible_user|ansible_port|ansible_ssh_private_key_file|ansible_ssh_pass):' || true; } | sed 's/^[[:space:]]*//; s/:.*//' | sort -u | tr '\n' ' ')
     fi
     if [[ -n "$EXTRA_IGNORED" ]]; then
         echo "Warning: CLI mode ignores non-connection keys in your inventory.yml: ${EXTRA_IGNORED}" >&2
@@ -419,8 +484,8 @@ else
         echo "          ansible_host: $HOST"
         echo "          ansible_user: $USER_NAME"
         echo "          ansible_port: $PORT"
-        [[ -n "$PKEY" ]] && echo "          ansible_ssh_private_key_file: $PKEY"
-        [[ -n "$PASS" ]] && echo "          ansible_ssh_pass: (hidden)"
+        [[ -n "$PKEY" ]] && echo "          ansible_ssh_private_key_file: $PKEY" || true
+        [[ -n "$PASS" ]] && echo "          ansible_ssh_pass: (hidden)" || true
     else
         echo "Preparing to run Ansible with provided parameters..."
         if [[ -n "$PKEY" ]]; then
@@ -457,6 +522,25 @@ elif [[ "$ANSIBLE_VERBOSE_LEVEL" -eq 4 ]]; then
 fi
 if [[ "$Xray_DEBUG" -eq 1 ]]; then
     ANSIBLE_CMD+=(-e "xray_debug=true")
+fi
+if [[ -n "$ROTATE" ]]; then
+    ANSIBLE_CMD+=(-e "xray_reality_rotate=$ROTATE")
+fi
+if [[ -n "$RUNTIME" ]]; then
+    ANSIBLE_CMD+=(-e "xray_runtime=$RUNTIME")
+fi
+# Boolean goes as JSON: the string "false" would be truthy in the config template.
+if [[ -n "$WARP" ]]; then
+    ANSIBLE_CMD+=(-e "{\"warp_enabled\": $WARP}")
+fi
+if [[ -n "$XRAY_PORT_VALUE" ]]; then
+    ANSIBLE_CMD+=(-e "xray_port=$XRAY_PORT_VALUE")
+fi
+if [[ -n "$NUM_CLIENTS" ]]; then
+    ANSIBLE_CMD+=(-e "num_clients=$NUM_CLIENTS")
+fi
+if [[ -n "$CAMOUFLAGE" ]]; then
+    ANSIBLE_CMD+=(-e "reality_camouflage_domain=$CAMOUFLAGE")
 fi
 if [[ "$USE_INVENTORY" -eq 1 ]]; then
     ANSIBLE_CMD+=(-i "$INVENTORY_FILE" deploy.yml)

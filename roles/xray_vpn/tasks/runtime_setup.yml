@@ -1,14 +1,6 @@
 ---
-# Common runtime setup — runs before any runtime_X.yml.
-# Installs runtime-agnostic apt dependencies and derives the two facts used
-# by every runtime-specific path:
-#   - xray_container_image: explicit xray_docker_image override, or
-#     "{{ xray_container_repo }}:{{ xray_version }}" when unset.
-#   - xray_cli_command: full invocation that leads to the `xray` CLI on
-#     the target — the native binary path, or
-#     `docker run --rm <image> xray` / `podman run --rm <image> xray`
-#     (the trailing `xray` is the binary name inside the container).
-#     Keys.yml calls `{{ xray_cli_command }} x25519` uniformly.
+# Runs before any runtime_X.yml: apt deps + facts xray_container_image / xray_cli_command
+# (uniform runtime-aware `xray` CLI invocation used by keys.yml).
 
 - name: Install runtime-agnostic apt dependencies
   ansible.builtin.apt:
@@ -35,9 +27,5 @@
       {{
         '/usr/local/bin/xray'
         if (xray_runtime == 'native')
-        else (
-          'docker run --rm ' ~ xray_container_image ~ ' xray'
-          if (xray_runtime == 'docker')
-          else 'podman run --rm ' ~ xray_container_image ~ ' xray'
-        )
+        else 'docker run --rm ' ~ xray_container_image ~ ' xray'
       }}

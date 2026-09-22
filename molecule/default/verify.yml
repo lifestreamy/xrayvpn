@@ -62,6 +62,291 @@
       register: client_yaml
       failed_when: not client_yaml.stat.exists
 
+    - name: Slurp clash profile for the anti-hairpin assert
+      ansible.builtin.slurp:
+        src: "{{ xray_client_configs_dir }}/clash_client_0.yaml"
+      register: clash_profile
+      changed_when: false
+
+    - name: Assert clash profile pins its own server DIRECT (anti-hairpin)
+      ansible.builtin.assert:
+        that:
+          - clash_text is search('IP-CIDR,' ~ server_host ~ '/32,DIRECT') or
+            clash_text is search('IP-CIDR6,' ~ server_host ~ '/128,DIRECT') or
+            clash_text is search('DOMAIN,' ~ server_host ~ ',DIRECT')
+        fail_msg: "clash profile lost the anti-hairpin rule for {{ server_host }}"
+      vars:
+        clash_text: "{{ clash_profile.content | b64decode }}"
+        server_host: >-
+          {{ clash_text | regex_search('server: "([^"]+)"', '\1') | first }}
+
+    - name: Assert journald retention drop-in exists
+      ansible.builtin.stat:
+        path: /etc/systemd/journald.conf.d/60-xray-ansible.conf
+      register: journald_dropin
+      failed_when: not journald_dropin.stat.exists
+
+    - name: Slurp journald drop-in
+      ansible.builtin.slurp:
+        src: /etc/systemd/journald.conf.d/60-xray-ansible.conf
+      register: journald_dropin_content
+      changed_when: false
+
+    - name: Assert journald drop-in pins persistent storage and caps
+      ansible.builtin.assert:
+        that:
+          - dropin is search('Storage=persistent')
+          - dropin is search('SystemMaxUse=')
+          - dropin is search('MaxRetentionSec=')
+        fail_msg: "journald drop-in is missing required keys"
+      vars:
+        dropin: "{{ journald_dropin_content.content | b64decode }}"
+
+    - name: Assert systemd-journald is active after restart
+      ansible.builtin.command:
+        cmd: systemctl is-active systemd-journald
+      register: journald_active
+      changed_when: false
+      failed_when: journald_active.stdout | trim != 'active'
+
+    - name: Slurp xray config for the log-settings assert
+      ansible.builtin.slurp:
+        src: "{{ xray_config_dir }}/config.json"
+      register: xray_cfg_content
+      changed_when: false
+
+    - name: Assert xray log block keeps logs in stdout/journald
+      ansible.builtin.assert:
+        that:
+          - cfg_text is search('"loglevel"')
+          - "cfg_text is not search('\"error\": *\"/')"
+        fail_msg: "xray log config drifted from the journald-only design"
+      vars:
+        cfg_text: "{{ xray_cfg_content.content | b64decode }}"
+
+    - name: 'Assert access log switch off renders "access": "none"'
+      ansible.builtin.assert:
+        that:
+          - "xray_cfg_content.content | b64decode is search('\"access\": \"none\"')"
+        fail_msg: 'access log should default to "none" (journald-only privacy default)'
+      when: not (xray_log_access | default(false) | bool)
+
+    - name: Assert xray-obs-snapshot timer is enabled and active
+      when: xray_obs_timer | default(true) | bool
+      block:
+        - name: Check xray-obs-snapshot timer enabled state
+          ansible.builtin.command:
+            cmd: systemctl is-enabled xray-obs-snapshot.timer
+          register: obs_timer_enabled
+          changed_when: false
+          failed_when: obs_timer_enabled.stdout | trim != 'enabled'
+
+        - name: Check xray-obs-snapshot timer active
+          ansible.builtin.command:
+            cmd: systemctl is-active xray-obs-snapshot.timer
+          register: obs_timer_active
+          changed_when: false
+          failed_when: obs_timer_active.stdout | trim != 'active'
+
+        - name: Slurp obs snapshot script
+          ansible.builtin.slurp:
+            src: /usr/local/bin/xray-obs-snapshot
+          register: obs_script
+
+        - name: Assert obs script tags the journal
+          ansible.builtin.assert:
+            that:
+              - obs_script.content | b64decode is search('logger -t xray-obs')
+            fail_msg: "xray-obs-snapshot lost its journal tagging"
+      tags: obs
+
+    - name: Assert xray-obs-snapshot artifacts are absent when disabled
+      ansible.builtin.stat:
+        path: /usr/local/bin/xray-obs-snapshot
+      register: obs_absent_check
+      failed_when:
+        - obs_absent_check.stat.exists
+        - not (xray_obs_timer | default(true) | bool)
+      tags: obs
+
+    - name: Assert watchdog timer is enabled and active
+      when: xray_watchdog_enabled | default(true) | bool
+      block:
+        - name: Check watchdog timer enabled state
+          ansible.builtin.command:
+            cmd: systemctl is-enabled xray-watchdog.timer
+          register: wd_timer_enabled
+          changed_when: false
+          failed_when: wd_timer_enabled.stdout | trim != 'enabled'
+
+        - name: Check watchdog timer active
+          ansible.builtin.command:
+            cmd: systemctl is-active xray-watchdog.timer
+          register: wd_timer_active
+          changed_when: false
+          failed_when: wd_timer_active.stdout | trim != 'active'
+
+    - name: Render config template with the warp/watchdog branch (JSON-validity check)
+      ansible.builtin.template:
+        src: ../../roles/xray_vpn/templates/xray_config.json.j2
+        dest: /tmp/xray-config-render-check.json
+        mode: '0600'
+      vars:
+        xray_vpn_client_uuids: ["00000000-0000-0000-0000-000000000000"]
+        xray_vpn_xray_private_key: mock
+        xray_vpn_xray_short_id: mock
+        warp_enabled: true
+        warp_ipv6: false
+        warp_parsed:
+          secret_key: mock
+          ipv4: 10.0.0.2/32
+          peer_public_key: mock
+        warp_reserved: [0, 0, 0]
+        xray_watchdog_enabled: true
+      changed_when: false
+
+    - name: Read back the rendered warp-branch config
+      ansible.builtin.slurp:
+        src: /tmp/xray-config-render-check.json
+      register: render_check
+
+    - name: Assert probe inbound and routing render correctly
+      ansible.builtin.assert:
+        that:
+          - rendered.inbounds | selectattr('tag', 'defined') | selectattr('tag', 'equalto', 'probe') | list | length == 1
+          - probe_inbound.listen == '127.0.0.1'
+          - probe_inbound.settings.auth == 'noauth'
+          - rendered.routing.rules | length == 1
+          - rendered.routing.rules[0].inboundTag == ['probe']
+          - rendered.routing.rules[0].outboundTag == 'warp'
+      vars:
+        rendered: "{{ render_check.content | b64decode | from_json }}"
+        probe_inbound: "{{ rendered.inbounds | selectattr('tag', 'equalto', 'probe') | first }}"
+
+    - name: Render config template with warp off (no probe, no routing)
+      ansible.builtin.template:
+        src: ../../roles/xray_vpn/templates/xray_config.json.j2
+        dest: /tmp/xray-config-plain-check.json
+        mode: '0600'
+      vars:
+        xray_vpn_client_uuids: ["00000000-0000-0000-0000-000000000000"]
+        xray_vpn_xray_private_key: mock
+        xray_vpn_xray_short_id: mock
+        warp_enabled: false
+        xray_watchdog_enabled: true
+      changed_when: false
+
+    - name: Read back the rendered plain config
+      ansible.builtin.slurp:
+        src: /tmp/xray-config-plain-check.json
+      register: plain_check
+
+    - name: Assert no probe branch without warp
+      ansible.builtin.assert:
+        that:
+          - '"probe" not in plain_text'
+          - '"routing" not in plain_text'
+      vars:
+        plain_text: "{{ plain_check.content | b64decode }}"
+
+    - name: Remove render-check files
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - /tmp/xray-config-render-check.json
+        - /tmp/xray-config-plain-check.json
+
+    - name: 'Assert :443 listener is owned by the xray process (no :443 squatter)'
+      ansible.builtin.command:
+        cmd: ss -tulpn '( sport = :{{ xray_port | default(443) }} )'
+      register: port443_owner
+      changed_when: false
+      failed_when:
+        - port443_owner.stdout is not search('users:\(\("xray"')
+
+    - name: Collect watchdog events of the last hour (report-only)
+      ansible.builtin.command:
+        cmd: journalctl -t xray-watchdog --since '-1h' -o cat
+      register: wd_events
+      changed_when: false
+      failed_when: false
+
+    - name: Report watchdog events of the last hour
+      ansible.builtin.debug:
+        msg: "watchdog journal lines (last hour): {{ wd_events.stdout_lines | length }}"
+
+    - name: Render watchdog script with the warp branch for selftest
+      ansible.builtin.template:
+        src: ../../roles/xray_vpn/templates/xray-watchdog.sh.j2
+        dest: /tmp/xray-watchdog-check.sh
+        mode: '0755'
+      vars:
+        warp_enabled: true
+        warp_endpoint: "example.invalid:2408"
+      changed_when: false
+
+    - name: Create storm and quiet journal fixtures
+      ansible.builtin.shell: |
+        for _ in $(seq 1 25); do
+          echo 'proxy/wireguard failed to process outbound'
+        done > /tmp/storm-fixture.log
+        echo 'Xray 26.6.27 (Xray, Penetrates Everything.) started' > /tmp/quiet-fixture.log
+      changed_when: false
+
+    - name: Selftest watchdog on the storm fixture (dry-run)
+      ansible.builtin.command:
+        cmd: >-
+          bash -c 'XRAY_WATCHDOG_FIXTURE=/tmp/storm-fixture.log
+          XRAY_WATCHDOG_DRY_RUN=1
+          XRAY_WATCHDOG_STATE=/tmp/xray-watchdog-selftest-state /tmp/xray-watchdog-check.sh 2>&1'
+      register: wd_storm_run
+      changed_when: false
+      failed_when: false
+
+    - name: Report storm selftest stdout
+      ansible.builtin.debug:
+        msg: "storm selftest: {{ wd_storm_run.stdout_lines }}"
+
+    - name: Assert storm fixture triggers a dry restart line
+      ansible.builtin.assert:
+        that:
+          - "wd_storm_run.stdout is search('restart xray: storm=')"
+          - wd_storm_run.stdout is search('[[]DRY[]].*systemctl')
+        fail_msg: >-
+          storm fixture did not trigger the watchdog as expected;
+          rc={{ wd_storm_run.rc }} stdout={{ wd_storm_run.stdout_lines }}
+
+    - name: Selftest watchdog on the quiet fixture (dry-run)
+      ansible.builtin.command:
+        cmd: >-
+          bash -c 'XRAY_WATCHDOG_FIXTURE=/tmp/quiet-fixture.log
+          XRAY_WATCHDOG_DRY_RUN=1
+          XRAY_WATCHDOG_STATE=/tmp/xray-watchdog-selftest-state /tmp/xray-watchdog-check.sh 2>&1'
+      register: wd_quiet_run
+      changed_when: false
+      failed_when: false
+
+    - name: Assert quiet fixture triggers nothing
+      ansible.builtin.assert:
+        that:
+          - wd_quiet_run.stdout is not search('restart xray:')
+        fail_msg: "quiet fixture wrongly triggered the watchdog"
+
+    - name: Assert xray.service stayed active through the storm selftest
+      ansible.builtin.command:
+        cmd: systemctl is-active xray
+      changed_when: false
+
+    - name: Remove watchdog selftest artifacts
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - /tmp/xray-watchdog-check.sh
+        - /tmp/storm-fixture.log
+        - /tmp/quiet-fixture.log
+
     - name: Run mihomo end-to-end handshake (only when xray_e2e_enabled is true)
       ansible.builtin.import_tasks: e2e.yml
       when: xray_e2e_enabled | default(false)

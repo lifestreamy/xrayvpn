@@ -26,7 +26,7 @@ hidden input, specify neither -Pass nor -PKey.
 +--------------------------------------------------------------+
 | Release: v2026-09-04                                         |
 | Author:  Tim Korelov                                         |
-| Contact: https://github.com/lifestreamy                      |
+| Contact: https://korelov.dev                                 |
 | License: AGPL-3.0 + commercial-use restriction                |
 +--------------------------------------------------------------+
 
@@ -84,6 +84,36 @@ Developer mode. The wrapper still invokes WSL and runs provision-vpn.sh,
 but with --dry-run so that no packages are installed, no Ansible run
 modifies the VPS, and no temporary files are removed. Useful for previewing
 the final command line and verifying parameters.
+
+.PARAMETER Rotate
+Regenerate the REALITY identity (forwards --rotate to the bash script;
+the old state is backed up on the server before rotation).
+Mutually exclusive with -NoRotate.
+
+.PARAMETER NoRotate
+Explicitly keep the existing REALITY identity (forwards --no-rotate;
+this is the default behavior).
+
+.PARAMETER Runtime
+xray_runtime override (forwards --runtime): native | docker.
+Default: value from config/settings.yml on the server bundle.
+
+.PARAMETER Warp
+Force-enable the Cloudflare WARP outbound (forwards --warp).
+Mutually exclusive with -NoWarp.
+
+.PARAMETER NoWarp
+Force-disable the Cloudflare WARP outbound (forwards --no-warp).
+Mutually exclusive with -Warp.
+
+.PARAMETER XrayPort
+VLESS inbound TCP port (forwards --xray-port; default 443).
+
+.PARAMETER NumClients
+Number of client configs to generate (forwards --num-clients).
+
+.PARAMETER CamouflageDomain
+REALITY SNI camouflage domain (forwards --camouflage-domain).
 
 .PARAMETER LogLevel
 Controls output verbosity.
@@ -158,6 +188,33 @@ param(
     [switch]$DryRun,
 
     [Parameter()]
+    [switch]$Rotate,
+
+    [Parameter()]
+    [switch]$NoRotate,
+
+    [Parameter()]
+    [ValidateSet('native', 'docker')]
+    [string]$Runtime,
+
+    [Parameter()]
+    [switch]$Warp,
+
+    [Parameter()]
+    [switch]$NoWarp,
+
+    [Parameter()]
+    [ValidateRange(1, 65535)]
+    [int]$XrayPort,
+
+    [Parameter()]
+    [ValidateRange(1, 999)]
+    [int]$NumClients,
+
+    [Parameter()]
+    [string]$CamouflageDomain,
+
+    [Parameter()]
     [ValidateSet('None', 'Default', 'Verbose')]
     [string]$LogLevel = 'Default'
 )
@@ -167,7 +224,7 @@ $title = "Xray VPN Provisioning Wrapper (Clash Verge / FlClash / Amnezia)"
 $version = 'v2026-09-04'
 $license = 'AGPL-3.0 + commercial-use restriction'
 $author = 'Tim Korelov'
-$contact = 'https://github.com/lifestreamy'
+$contact = 'https://korelov.dev'
 
 function Write-LogDefault([string]$Message) {
     if ($LogLevel -in @('Default', 'Verbose')) {
@@ -209,6 +266,13 @@ if ($DryRun) {
 
 if ($UseInventory -and $Inventory) {
     throw "Parameters -UseInventory and -Inventory are mutually exclusive; use only one."
+}
+
+if ($Rotate -and $NoRotate) {
+    throw "Parameters -Rotate and -NoRotate are mutually exclusive; use only one."
+}
+if ($Warp -and $NoWarp) {
+    throw "Parameters -Warp and -NoWarp are mutually exclusive; use only one."
 }
 $inventoryMode = [bool]($UseInventory -or $Inventory)
 
@@ -290,6 +354,38 @@ switch ($LogLevel) {
         $wslArgs += '--verbose'
         Write-LogVerbose "Passing verbosity flag to bash: --verbose"
     }
+}
+
+if ($Rotate) {
+    $wslArgs += '--rotate'
+    Write-LogVerbose "Passing rotation flag to bash: --rotate"
+} elseif ($NoRotate) {
+    $wslArgs += '--no-rotate'
+    Write-LogVerbose "Passing rotation flag to bash: --no-rotate"
+}
+
+if ($Runtime) {
+    $wslArgs += @('--runtime', $Runtime)
+    Write-LogVerbose "Passing runtime flag to bash: --runtime $Runtime"
+}
+if ($Warp) {
+    $wslArgs += '--warp'
+    Write-LogVerbose "Passing warp flag to bash: --warp"
+} elseif ($NoWarp) {
+    $wslArgs += '--no-warp'
+    Write-LogVerbose "Passing warp flag to bash: --no-warp"
+}
+if ($PSBoundParameters.ContainsKey('XrayPort')) {
+    $wslArgs += @('--xray-port', $XrayPort)
+    Write-LogVerbose "Passing port override to bash: --xray-port $XrayPort"
+}
+if ($PSBoundParameters.ContainsKey('NumClients')) {
+    $wslArgs += @('--num-clients', $NumClients)
+    Write-LogVerbose "Passing client count to bash: --num-clients $NumClients"
+}
+if ($CamouflageDomain) {
+    $wslArgs += @('--camouflage-domain', $CamouflageDomain)
+    Write-LogVerbose "Passing camouflage domain to bash: --camouflage-domain $CamouflageDomain"
 }
 
 if ($Inventory) {

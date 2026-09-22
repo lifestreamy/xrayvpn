@@ -1,9 +1,5 @@
 ---
-# molecule/distro/prepare.yml — runs in the fresh container after create,
-# before converge. The role's runtime_setup.yml installs curl /
-# ca-certificates / unzip during converge, so nothing extra is needed here.
-# Mirrors molecule/default/prepare.yml except for hosts/connection —
-# keep the two files in sync.
+# No-op: runtime_setup.yml installs apt deps during converge; mirrors default/prepare.yml.
 - name: Prepare
   hosts: all
   gather_facts: false

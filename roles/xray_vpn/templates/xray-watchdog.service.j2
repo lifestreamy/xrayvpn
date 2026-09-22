@@ -1,0 +1,6 @@
+[Unit]
+Description=Xray egress watchdog (restarts xray.service only, never the host)
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/xray-watchdog

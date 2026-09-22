@@ -1,28 +1,9 @@
 ---
-# Molecule CI for the xray_vpn role and the deploy playbook.
-#
-# Trigger policy (project CI rule): pull requests only — `main` is
-# protected; the dev line is validated via manual workflow_dispatch.
-#
-# Jobs:
-#   syntax — cheap check: install pinned toolchain + run ansible-playbook
-#     --syntax-check (the inventory.yml.example parse warnings are known
-#     and harmless; rc 0 is what matters).
-#   distro — matrix legs per supported VPS distro (container scenario,
-#     molecule/distro): ubuntu2204, ubuntu2404, debian12. Container
-#     firewall task stays disabled there (ufw/iptables unreliable in
-#     containers).
-#   native — full host run (default scenario) on ubuntu-24.04 with
-#     xray_manage_firewall enabled: this is where the ufw install/allow
-#     path and the real end-to-end handshake are exercised.
-#   gate — always-on change classifier: on a docs-only pull request the
-#     heavy legs below skip via `if:` (a conditionally skipped job reports
-#     "skipped", which counts as success for future required checks);
-#     workflow_dispatch always runs everything. Python-client CI lives in
-#     the sibling workflow file python-client.yml (same gate block there).
-#
-# Failure artifacts: molecule logs (~/.cache/molecule) uploaded for 7
-# days; names include the matrix leg.
+# Molecule CI: gate (docs-only classifier), syntax, distro matrix
+# (ubuntu2204/ubuntu2404/debian12 containers), native (full host run).
+# Triggers: pull_request, workflow_dispatch (main protected; dev line via dispatch).
+# Firewall off in distro legs: scoping; ufw tasks work in containers (verified);
+# coverage — native job. Failure artifacts: molecule logs, 7 days.
 
 name: molecule
 
@@ -183,10 +164,9 @@ jobs:
           key: ansible-collections-${{ hashFiles('molecule/requirements.yml') }}
           restore-keys: ansible-collections-
 
-      # Full host run with the firewall tasks enabled — the distro legs keep
-      # them disabled (containers), so this job is the firewall coverage.
+      # ufw coverage — distro legs run with xray_manage_ufw=false (scoping).
       - name: Molecule test (host scenario, managed firewall)
-        run: molecule test -- -e xray_manage_firewall=true
+        run: molecule test -- -e xray_manage_ufw=true
 
       - name: Upload molecule logs
         if: failure()

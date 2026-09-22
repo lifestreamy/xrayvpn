@@ -1,27 +1,10 @@
 ---
-# Molecule scenario for role `xray_vpn`.
-# Driver: default — molecule 26's name for the host-run (delegated)
-# driver: runs Ansible directly on the molecule host (no
-# managed container). The role installs Xray natively
-# (xray_runtime: native, see group_vars below) on the host, so the
-# listener is on localhost. CI runners and WSL instances with systemd
-# as PID 1 are the supported execution targets.
-#
-# What changed vs the previous Docker+DinD scenario:
-#   - No platform block (the default driver runs Ansible on the host).
-#   - No inner dockerd / vfs storage driver (the role does not
-#     install Docker for xray_runtime: native).
-#   - group_vars set xray_runtime: native so the role dispatches to
-#     tasks/runtime_native.yml.
-#   - converge.yml uses connection: local (Ansible runs on the host
-#     that molecule is invoked from).
+# Default scenario: delegated driver — Ansible runs on the host; xray_runtime native.
+# Test knobs live in play vars: molecule ignores provisioner inventory group_vars.
 
 dependency:
   name: galaxy
   options:
-    # Shared test-harness requirements (role itself stays dependency-free —
-    # see molecule/requirements.yml header). Path is project-directory-relative;
-    # molecule's default lookup would not find a file outside the scenario dir.
     requirements-file: molecule/requirements.yml
 
 driver:
@@ -29,18 +12,9 @@ driver:
 
 provisioner:
   name: ansible
-  # Role resolution: `provisioner.config_options` writes `roles_path = ../..`
-  # into the subprocess ansible.cfg. From the molecule scenario's directory
-  # (`molecule/default/`) that resolves to the repo root, where Ansible then
-  # finds the `xray_vpn/` role subdirectory. molecule-native; works for
-  # all steps including the `syntax` step.
   config_options:
     defaults:
       roles_path: ../..
-  # Scenario test variables live in the plays (converge.yml / verify.yml):
-  # molecule 26.8 with the default driver ignores
-  # provisioner.inventory.group_vars in the generated inventory, so play-level
-  # vars are the single source of truth for the test knobs.
   playbooks:
     converge: converge.yml
     prepare: prepare.yml

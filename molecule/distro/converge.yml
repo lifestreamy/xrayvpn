@@ -17,5 +17,5 @@
       warp_enabled: false
       xray_backup_enabled: false
       xray_reality_rotate: false
-      xray_manage_firewall: false
+      xray_manage_ufw: false
       xray_debug: false

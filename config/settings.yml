@@ -7,7 +7,6 @@
 # Which container/host runtime to deploy xray under.
 #   native — Xray binary on host, managed by systemd (default, smallest footprint)
 #   docker — Docker Engine (legacy, kept as escape hatch)
-#   podman — Podman (experimental stub, not covered by molecule)
 # Asserted at the top of roles/xray_vpn/tasks/main.yml; only the matching
 # runtime_X.yml tasks and xray.service.X.j2 unit are applied.
 xray_runtime: native
@@ -59,6 +58,22 @@ xray_backup_enabled: true  # Timestamped backups before overwriting config/unit
 xray_reality_rotate: false  # Set true to force REALITY key + UUID regeneration (backs up old state first)
 # ---
 
+# --- Server logs and journal retention ---
+xray_log_level: warning  # xray verbosity (warning|error|info); logs stay in journald (stdout), no files
+xray_log_access: false  # xray access log (per-connection): off by default; true -> also journald
+xray_journal_max_use: "120M"  # disk cap of the whole host journal (system-wide by design)
+xray_journal_retention_days: 3  # journal history depth (whole host), days
+xray_obs_timer: true  # "black box": ~10-min read-only snapshot of host/service state into journald
+# ---
+
+# --- Egress watchdog ---
+xray_watchdog_enabled: true  # detect journal-storm / dead warp-egress probe -> restart xray.service only (never the host)
+xray_watchdog_storm_count: 20  # wireguard/outbound error lines within 5 min = storm trigger
+xray_watchdog_min_fail_cycles: 2  # consecutive dead probe cycles before restart
+xray_watchdog_max_restarts_per_hour: 3  # beyond the budget only an ALERT line is journalled
+xray_watchdog_probe_port: 10820  # loopback-only anonymous socks inbound forced through warp (added only when WARP is on)
+# ---
+
 # Role behavior 
 # Overrideable in inventory.yml (gitignored); for tests — in the molecule scenario.
-xray_manage_firewall: true  # Ufw rule task (ufw is auto-installed if missing); false in the molecule scenario (host firewall is out of test scope)
+xray_manage_ufw: true  # Allow-if-present: ufw is never installed; the allow rule is added only when ufw already exists

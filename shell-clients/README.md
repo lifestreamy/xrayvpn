@@ -1,22 +1,22 @@
-# Shell clients
+# Shell-клиенты
 
-Alternative command-line clients for provisioning the VPN server, written as
-plain shell scripts. They are self-contained (no dependency on the Python
-client, and vice versa).
+> English version: [README.en.md](README.en.md).
 
-Both clients are **supported** — they keep working and are documented; they are
-not developed further. New functionality lands in the Python client only.
+Альтернативные командные клиенты для развёртывания VPN-сервера — обычные шелл-скрипты.
+Самодостаточны: не зависят от Python-клиента, и наоборот.
 
-| Runtime | File | Runs on |
+Оба клиента **поддерживаются**: работают и задокументированы, но дальше не развиваются.
+Новые возможности появляются только в Python-клиенте.
+
+| Оболочка | Файл | Запуск на |
 |---|---|---|
 | Bash | `bash/provision-vpn.sh` | Linux, WSL (Ubuntu/Debian) |
-| PowerShell | `powershell/Provision-VPN.ps1` | Windows (WSL required; wraps the Bash client) |
+| PowerShell | `powershell/Provision-VPN.ps1` | Windows (нужен WSL; оборачивает Bash-клиент) |
 
-Both clients operate on the repository root (the parent of this directory):
-`inventory.yml` and the `downloaded-clients/` output directory live next to
-`deploy.yml`, not inside this folder.
+Оба клиента работают от корня репозитория (родительский каталог): `inventory.yml` и
+каталог результата `downloaded-clients/` лежат рядом с `deploy.yml`, а не здесь.
 
-Quick start:
+Быстрый старт:
 
 ```bash
 # Bash (Linux/WSL)

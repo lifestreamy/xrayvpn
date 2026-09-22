@@ -1,4 +1,4 @@
-"""WSL bridge helpers — run the playbook from Windows in local mode.
+"""WSL bridge helpers — Windows control node for `xrayvpn deploy --execution local`.
 
 Detection uses `wsl --status` exit code only (never parses localized output).
 """
@@ -63,6 +63,19 @@ def path_exists(path: str, *, distro: str | None = None) -> bool:
     if distro:
         cmd += ["-d", distro]
     cmd += ["test", "-x", path]
+    try:
+        result = subprocess.run(cmd, capture_output=True, timeout=30, check=False)
+    except (OSError, subprocess.SubprocessError):
+        return False
+    return result.returncode == 0
+
+
+def command_exists(command: str, *, distro: str | None = None) -> bool:
+    """`command -v` inside WSL for binaries that live on PATH (e.g. sshpass)."""
+    cmd = ["wsl.exe"]
+    if distro:
+        cmd += ["-d", distro]
+    cmd += ["bash", "-lc", f"command -v {shlex.quote(command)}"]
     try:
         result = subprocess.run(cmd, capture_output=True, timeout=30, check=False)
     except (OSError, subprocess.SubprocessError):
