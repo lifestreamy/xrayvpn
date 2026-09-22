@@ -33,7 +33,9 @@ def normalized_version(tag: str) -> str:
 
 def build_manifest(release: str, tag: str, directory: Path) -> dict[str, object]:
     names = sorted(
-        p.name for p in directory.iterdir() if p.name.startswith(("xrayvpn-", "xrayvpn_"))
+        p.name
+        for p in directory.iterdir()
+        if p.name.startswith(("xrayvpn-", "xrayvpn_")) and not p.name.endswith(".deb")
     )
     if not names:
         raise SystemExit("no xrayvpn release assets found to describe")

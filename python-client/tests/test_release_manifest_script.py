@@ -28,6 +28,13 @@ def test_normalized_version() -> None:
     assert manifest_mod.normalized_version("v0.4.1") == "0.4.1"
 
 
+def test_deb_asset_is_not_in_manifest(tmp_path: Path) -> None:
+    (tmp_path / "xrayvpn-0.4.1-linux-x64-portable").write_bytes(b"bin")
+    (tmp_path / "xrayvpn_0.4.1_amd64.deb").write_bytes(b"deb")
+    manifest = manifest_mod.build_manifest("lifestreamy/xrayvpn", "v0.4.1", tmp_path)
+    assert set(manifest["assets"]) == {"linux-x64"}
+
+
 def test_build_manifest_urls_and_hashes(tmp_path: Path) -> None:
     (tmp_path / "xrayvpn-0.4.1-windows-x64-portable.exe").write_bytes(b"win")
     (tmp_path / "xrayvpn_client-0.4.1-py3-none-any.whl").write_bytes(b"whl")

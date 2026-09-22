@@ -161,8 +161,82 @@ jobs:
           path: python-client/dist/
           if-no-files-found: error
 
+  deb:
+    needs: [build]
+    runs-on: ubuntu-22.04
+    defaults:
+      run:
+        shell: bash
+    env:
+      RAW_REV: ${{ github.event_name == 'push' && github.ref_name || inputs.tag }}
+    steps:
+      - uses: actions/checkout@34e114876b0b11c69e3ffa41ee652cc36245c427 # v6.0.2
+        with:
+          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.ref || '' }}
+      - uses: actions/download-artifact@85b33142143d8d70e61a4ad1f2283cfb1485ed98 # v5.0.0
+        with:
+          name: xrayvpn-linux-x64
+          path: bundle
+      - name: Package the .deb
+        run: |
+          set -euo pipefail
+          raw="$RAW_REV"
+          if [ -n "$raw" ] && [ "${raw#v}" != "$raw" ]; then
+            version="${raw#v}"
+            version="${version%%_*}"
+          else
+            version="$(sed -n 's/^version = "\(.*\)"$/\1/p' python-client/pyproject.toml | head -n1)"
+          fi
+          test -n "$version"
+          root="root"
+          install -d "$root/usr/bin"
+          install -m 0755 bundle/xrayvpn-*-linux-x64-portable "$root/usr/bin/xrayvpn"
+          python3 - <<'PY'
+          import sys
+          from pathlib import Path
+
+          sys.path.insert(0, "scripts")
+          import make_icon
+
+          usr = Path("root/usr")
+          desktop = usr / "share/applications/xrayvpn.desktop"
+          desktop.parent.mkdir(parents=True, exist_ok=True)
+          desktop.write_text(
+              "[Desktop Entry]\n"
+              "Type=Application\n"
+              "Name=xrayvpn\n"
+              "Comment=Provision Xray VLESS + REALITY VPN servers\n"
+              "Exec=xrayvpn\n"
+              "Terminal=true\n"
+              "Icon=xrayvpn\n"
+              "Categories=Network;Utility;\n",
+              encoding="utf-8",
+          )
+          icon = usr / "share/icons/hicolor/256x256/apps/xrayvpn.png"
+          icon.parent.mkdir(parents=True, exist_ok=True)
+          icon.write_bytes(make_icon.render_pngs()[256])
+          PY
+          sudo gem install --no-document fpm
+          mkdir -p deb
+          fpm -s dir -t deb \
+            -n xrayvpn -v "$version" --architecture amd64 \
+            --deb-priority optional \
+            --maintainer "Tim Korelov <timkorelov@gmail.com>" \
+            --description "Python client for provisioning Xray VLESS + REALITY VPN servers" \
+            --url "https://github.com/lifestreamy/xrayvpn" \
+            --license "AGPL-3.0-or-later" \
+            --package "deb/xrayvpn_${version}_amd64.deb" \
+            -C "$root" .
+          dpkg-deb -I "deb/xrayvpn_${version}_amd64.deb"
+          dpkg-deb -c "deb/xrayvpn_${version}_amd64.deb"
+      - uses: actions/upload-artifact@330a80a2a216371195056eb380486c0df05cbd70 # v5.0.8
+        with:
+          name: deb
+          path: deb/*.deb
+          if-no-files-found: error
+
   release:
-    needs: [build, dist]
+    needs: [build, dist, deb]
     if: github.event_name == 'push'
     runs-on: ubuntu-24.04
     permissions:
