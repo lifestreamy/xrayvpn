@@ -26,6 +26,7 @@ jobs:
         shell: bash
     env:
       TAG: ${{ github.event_name == 'release' && github.event.release.tag_name || inputs.tag }}
+      GH_REPO: ${{ github.repository }}
     steps:
       - name: Fetch the .deb from the release
         env:
