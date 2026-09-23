@@ -215,7 +215,7 @@ jobs:
   post-publish-winget:
     needs: latest
     # Gate: set the repository variable CHANNEL_WINGET_LIVE=true after the winget PR is merged.
-    if: github.event_name != 'pull_request' && (github.event_name == 'workflow_dispatch' || vars.CHANNEL_WINGET_LIVE == 'true')
+    if: github.event_name != 'pull_request' && vars.CHANNEL_WINGET_LIVE == 'true'
     runs-on: windows-latest
     defaults:
       run:
@@ -239,7 +239,7 @@ jobs:
   post-publish-aur:
     needs: latest
     # Gate: set the repository variable CHANNEL_AUR_LIVE=true after the first AUR push.
-    if: github.event_name != 'pull_request' && (github.event_name == 'workflow_dispatch' || vars.CHANNEL_AUR_LIVE == 'true')
+    if: github.event_name != 'pull_request' && vars.CHANNEL_AUR_LIVE == 'true'
     runs-on: ubuntu-24.04
     defaults:
       run:
@@ -261,7 +261,7 @@ jobs:
   post-publish-brew:
     needs: latest
     # Gate: set the repository variable CHANNEL_BREW_LIVE=true after the first tap push.
-    if: github.event_name != 'pull_request' && (github.event_name == 'workflow_dispatch' || vars.CHANNEL_BREW_LIVE == 'true')
+    if: github.event_name != 'pull_request' && vars.CHANNEL_BREW_LIVE == 'true'
     runs-on: macos-14
     defaults:
       run:

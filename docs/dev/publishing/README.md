@@ -44,9 +44,10 @@ compiles and lints the package, `install` also installs it and asserts the insta
 `EXPECTED_VERSION` is set.
 
 The `verify-channels` pipeline renders from the latest published release on pull requests that
-touch `packaging/**` or `scripts/cd/**`, and checks the live channels weekly. Every weekly check
-asserts that the installed version equals the latest release, so a stale channel fails instead of
-passing silently; the run summary lists which gated channels were enabled or skipped.
+touch `packaging/**` or `scripts/cd/**`, and checks the live channels weekly; a channel is checked
+once its `CHANNEL_*_LIVE` variable is set, and a manual run checks exactly the same set. Every
+weekly check asserts that the installed version equals the latest release, so a stale channel fails
+instead of passing silently; the run summary lists which gated channels were enabled or skipped.
 
 Authenticode signing of the Windows asset is not part of the release flow. If it is added later, it
 slots into `release-binaries.yml` between the build and the checksums: sign and timestamp the exe,
