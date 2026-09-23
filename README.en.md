@@ -1,14 +1,30 @@
 [![Русский](https://img.shields.io/badge/%D0%A0%D1%83%D1%81%D1%81%D0%BA%D0%B8%D0%B9-00a693?style=flat)](README.md)
 [![English](https://img.shields.io/badge/English-808080?style=flat)](README.en.md)
 
+<p align="center">
+  <img src="assets/icon/icon-preview.png" width="128" alt="xrayvpn">
+</p>
+
 # Xray Reality VPN Server — deployment
+
+[![Release](https://img.shields.io/github/v/release/lifestreamy/xrayvpn?style=flat&label=release&color=00a693)](https://github.com/lifestreamy/xrayvpn/releases/latest)
+[![PyPI](https://img.shields.io/pypi/v/xrayvpn?style=flat&label=pypi&color=00a693)](https://pypi.org/project/xrayvpn/)
+[![Python](https://img.shields.io/badge/python-3.12%2B-00a693?style=flat&logo=python&logoColor=white)](python-client/README.en.md)
+[![License](https://img.shields.io/badge/license-AGPL--3.0%20%2B%20commercial-00a693?style=flat)](LICENSE)
 
 > VLESS Xray Reality with an optional Cloudflare WARP outbound. A personal VPN on your own VPS
 > running Ubuntu/Debian — no domain to buy, just an IP and the root password.
 > A console Python client for every platform (Ubuntu/Debian/Arch | Windows | macOS): a ready build
-> file or a terminal run; install via pip, apt, Homebrew, winget or AUR.
+> file or a terminal run; install via pip or apt (Ubuntu 24.04 / Debian 12).
 > Ansible powers the deployment. Finished client configs (Amnezia / Clash Verge / FlClash) are
 > generated and downloaded to your machine. What comes next — [plans](docs/user/PLANNED.en.md).
+
+<table>
+  <tr>
+    <td><img width="460" alt="xrayvpn — Russian interface" src="assets/screenshots/banner-ru.png"></td>
+    <td><img width="460" alt="xrayvpn — English interface" src="assets/screenshots/banner-en.png"></td>
+  </tr>
+</table>
 
 ## Table of contents
 
@@ -71,13 +87,45 @@ VPN stopped — start with [`docs/user/RUNBOOK.en.md`](docs/user/RUNBOOK.en.md).
 | Path | What you need | How | Comment |
 |---|---|---|---|
 | Portable app | one downloaded file, nothing to install | download from [Releases](https://github.com/lifestreamy/xrayvpn/releases/latest) and run it (double-click on Windows), type `deploy` | console app |
-| Package managers | a package manager | `pip install xrayvpn`, apt, Homebrew, winget, AUR | one-command install |
+| Package managers | a package manager | `pip install xrayvpn` (Python 3.12+), apt (Ubuntu 24.04 / Debian 12) | one-command install |
 | From the repository | `uv` (installs Python 3.12+) | `uv run --project python-client xrayvpn deploy` | running from source |
 | Shell wrappers | Linux/WSL (bash) or Windows+WSL (PowerShell) | `provision-vpn.sh` / `Provision-VPN.ps1` | maintained, not developed |
 | Ansible directly | ansible-core 2.14+ and `community.general` | `ansible-playbook -i inventory.yml deploy.yml` | for techies |
 
 What you need either way: a VPS (fresh Ubuntu 20.04+/Debian 11+, root/sudo, a public IP) and SSH
 access to it — a password or a key. Install guide — [`docs/user/SETUP.en.md`](docs/user/SETUP.en.md).
+
+<details>
+<summary>Install per platform — commands</summary>
+
+**Windows:** download `xrayvpn-<version>-windows-x64-portable.exe` from
+[Releases](https://github.com/lifestreamy/xrayvpn/releases/latest) and double-click it.
+
+**macOS (Apple Silicon):** download `xrayvpn-<version>-macos-arm64-portable`:
+
+```bash
+chmod +x xrayvpn-*-macos-arm64-portable
+./xrayvpn-*-macos-arm64-portable
+```
+
+**Linux (Ubuntu 24.04 / Debian 12)** — the apt repository:
+
+```bash
+sudo curl -fsSL -o /usr/share/keyrings/xrayvpn-archive-keyring.gpg \
+  https://lifestreamy.github.io/xrayvpn/apt/xrayvpn-archive-keyring.gpg
+echo "deb [signed-by=/usr/share/keyrings/xrayvpn-archive-keyring.gpg] https://lifestreamy.github.io/xrayvpn/apt/ $(. /etc/os-release; echo $VERSION_CODENAME) main" \
+  | sudo tee /etc/apt/sources.list.d/xrayvpn.list
+sudo apt update && sudo apt install xrayvpn
+```
+
+Key fingerprint: `60DA D207 F0BE 147C 5830 D3D8 1BD4 9EC3 0480 57D3`.
+Other distributions — the ready builds from Releases (`chmod +x`, run
+`./xrayvpn-*-linux-x64-portable`) or the `.deb`: `sudo apt install ./xrayvpn_*_amd64.deb`.
+
+**Any OS with Python 3.12+:** `pip install xrayvpn`; on Debian/Ubuntu the system pip is locked
+down — `sudo apt install pipx && pipx install xrayvpn`.
+
+</details>
 
 The app is a console tool — feel free to mistype commands, nothing breaks.
 

@@ -94,6 +94,8 @@ There was no v0.4.0 release: this section covers the whole 0.4.x line.
   environment date; the vless inbound is tagged so a molecule assertion no longer fails on a
   missing attribute.
 - `--help` shows boolean defaults as words (`default: enabled` / `default: disabled`).
+- The banner adapts to the terminal width: long lines wrap, a narrow window (<72 columns) renders
+  the screen without boxes, and the outer frame matches for RU and EN.
 
 ### Removed
 - The `podman` runtime (experimental stub, never left experimental; not covered by molecule

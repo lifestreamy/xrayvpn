@@ -12,6 +12,10 @@ platform from [Releases](https://github.com/lifestreamy/xrayvpn/releases/latest)
 [../docs/user/SETUP.en.md](../docs/user/SETUP.en.md), "First run" section. To build the binary
 yourself (Nuitka onefile, debug mode, smoke) — [BUILD.en.md](BUILD.en.md).
 
+More install options: `pip install xrayvpn` (Python 3.12+; on Debian/Ubuntu — `pipx install
+xrayvpn`) and the apt repository — `apt install xrayvpn` (Ubuntu 24.04 / Debian 12; setup
+commands live in the [root README](../README.en.md#quick-start)).
+
 Working with the sources in the repository requires [uv](https://docs.astral.sh/uv/) (or Python 3.12+):
 
 ```powershell
