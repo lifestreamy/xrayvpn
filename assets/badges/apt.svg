@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="85" height="28" role="img" aria-label="apt v0.4.1">
+  <title>apt v0.4.1</title>
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#00D587"/>
+      <stop offset="1" stop-color="#00B371"/>
+    </linearGradient>
+  </defs>
+  <rect x="0.5" y="0.5" width="84" height="27" rx="4" fill="#21262D" stroke="#3D444D"/>
+  <path d="M34 1 H80 A4 4 0 0 1 84 5 V23 A4 4 0 0 1 80 27 H34 Z" fill="url(#g)"/>
+  <text x="8" y="18.4" font-family="Arial, 'Liberation Sans', Helvetica, sans-serif" font-size="12" fill="#C4CDD8">apt</text>
+  <text x="42" y="18.4" font-family="Arial, 'Liberation Sans', Helvetica, sans-serif" font-size="12" font-weight="700" fill="#0B1F16">v0.4.1</text>
+</svg>

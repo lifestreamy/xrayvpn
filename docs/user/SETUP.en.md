@@ -1,6 +1,6 @@
 # SETUP — install and configure
 
-A console application: everything for the first run and everyday use. Technical details live in the neighbouring files.
+A console application: everything for the first run and regular use. Technical details live in the neighbouring files.
 Requirements: a VPS — fresh Ubuntu 20.04+ or Debian 11+, root or sudo, a public IP; on Windows for local mode — WSL2 with Ubuntu/Debian.
 
 ## Contents

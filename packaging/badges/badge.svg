@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="{{W}}" height="28" role="img" aria-label="{{ALT}}">
+  <title>{{ALT}}</title>
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="{{G1}}"/>
+      <stop offset="1" stop-color="{{G2}}"/>
+    </linearGradient>
+  </defs>
+  <rect x="0.5" y="0.5" width="{{IW}}" height="27" rx="4" fill="#21262D" stroke="#3D444D"/>
+  <path d="M{{X2}} 1 H{{ARCS}} A4 4 0 0 1 {{XRIGHT}} 5 V23 A4 4 0 0 1 {{ARCS}} 27 H{{X2}} Z" fill="url(#g)"/>
+  <text x="8" y="18.4" font-family="Arial, 'Liberation Sans', Helvetica, sans-serif" font-size="12" fill="#C4CDD8">{{LABEL}}</text>
+  <text x="{{X2T}}" y="18.4" font-family="Arial, 'Liberation Sans', Helvetica, sans-serif" font-size="12" font-weight="700" fill="{{INK}}">{{VALUE}}</text>
+</svg>

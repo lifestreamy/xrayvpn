@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="98" height="28" role="img" aria-label="winget soon">
+  <title>winget soon</title>
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#D29922"/>
+      <stop offset="1" stop-color="#B0811D"/>
+    </linearGradient>
+  </defs>
+  <rect x="0.5" y="0.5" width="97" height="27" rx="4" fill="#21262D" stroke="#3D444D"/>
+  <path d="M52 1 H93 A4 4 0 0 1 97 5 V23 A4 4 0 0 1 93 27 H52 Z" fill="url(#g)"/>
+  <text x="8" y="18.4" font-family="Arial, 'Liberation Sans', Helvetica, sans-serif" font-size="12" fill="#C4CDD8">winget</text>
+  <text x="60" y="18.4" font-family="Arial, 'Liberation Sans', Helvetica, sans-serif" font-size="12" font-weight="700" fill="#0B1F16">soon</text>
+</svg>

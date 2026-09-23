@@ -25,6 +25,21 @@ The `xrayvpn` formula in the tap `lifestreamy/homebrew-tap`, so users install wi
 
 Secret: `BREW_DEPLOY_KEY` (write deploy key of the tap repository).
 
+## Tap trust
+
+Since Homebrew 6.0 a third-party tap is not loaded until it is trusted. The fully qualified
+command trusts exactly one formula, so it needs no extra step:
+
+```
+brew install lifestreamy/tap/xrayvpn
+```
+
+The short form works only after an explicit trust: `brew tap lifestreamy/tap`, then
+`brew trust --formula lifestreamy/tap/xrayvpn` (or `brew trust lifestreamy/tap` for the whole tap),
+and only then `brew install xrayvpn`.
+
+The formula covers macOS arm64 only (`depends_on arch: :arm64`); Homebrew on Linux is not covered.
+
 ## Repair
 
 Re-run the pipeline with the released tag and approve it. The formula can also be pushed by hand:

@@ -1,5 +1,5 @@
-[![English](https://img.shields.io/badge/English-808080?style=flat)](README.en.md)
-[![Русский](https://img.shields.io/badge/%D0%A0%D1%83%D1%81%D1%81%D0%BA%D0%B8%D0%B9-00a693?style=flat)](README.md)
+[![English](assets/badges/lang-en-muted.svg)](README.en.md)
+[![Русский](assets/badges/lang-ru.svg)](README.md)
 
 <p align="center">
   <img src="assets/icon/icon-preview.png" width="128" alt="xrayvpn">
@@ -7,10 +7,14 @@
 
 # Xray Reality VPN Server — развёртывание
 
-[![Release](https://img.shields.io/github/v/release/lifestreamy/xrayvpn?style=flat&label=release&color=00a693)](https://github.com/lifestreamy/xrayvpn/releases/latest)
-[![PyPI](https://img.shields.io/pypi/v/xrayvpn?style=flat&label=pypi&color=00a693)](https://pypi.org/project/xrayvpn/)
-[![Python](https://img.shields.io/badge/python-3.12%2B-00a693?style=flat&logo=python&logoColor=white)](python-client/README.md)
-[![License](https://img.shields.io/badge/license-AGPL--3.0%20%2B%20commercial-00a693?style=flat)](LICENSE)
+[![release v0.4.1](assets/badges/release.svg?v=0.4.1)](https://github.com/lifestreamy/xrayvpn/releases/latest)
+[![brew v0.4.1](assets/badges/brew.svg?v=0.4.1)](https://github.com/lifestreamy/homebrew-tap)
+[![winget скоро](assets/badges/winget-ru.svg)](https://github.com/microsoft/winget-pkgs/pull/440001)
+[![apt v0.4.1](assets/badges/apt.svg?v=0.4.1)](https://lifestreamy.github.io/xrayvpn/apt/)
+[![pip v0.4.1](assets/badges/pip.svg?v=0.4.1)](https://pypi.org/project/xrayvpn/)
+[![uv tool v0.4.1](assets/badges/uv.svg?v=0.4.1)](https://pypi.org/project/xrayvpn/)
+[![python 3.12+](assets/badges/python.svg)](python-client/README.md)
+[![license AGPL-3.0](assets/badges/license.svg)](LICENSE)
 
 > VLESS Xray Reality + опциональный исходящий Cloudflare WARP. Личный VPN-сервер на своём VPS
 > Ubuntu/Debian без покупки домена: достаточно IP и пароля root.
@@ -85,7 +89,7 @@
 | Путь | Что нужно | Как | Комментарий |
 |---|---|---|---|
 | Портативное приложение | один скачанный файл, ставить ничего не надо | скачать из [Releases](https://github.com/lifestreamy/xrayvpn/releases/latest) и запустить (Windows — двойной клик), набрать `deploy` | консольное приложение |
-| Пакетные менеджеры | менеджер пакетов | `pip install xrayvpn` (Python 3.12+), apt (Ubuntu 24.04 / Debian 12) | установка одной командой |
+| Пакетные менеджеры | менеджер пакетов | `pip install xrayvpn` (Python 3.12+), brew (macOS Apple Silicon), apt (Ubuntu 24.04 / Debian 12) | установка одной командой |
 | Из репозитория | `uv` (поставит Python 3.12+) | `uv run --project python-client xrayvpn deploy` | запуск из исходников |
 | Shell-обёртки | Linux/WSL (bash) или Windows+WSL (PowerShell) | `provision-vpn.sh` / `Provision-VPN.ps1` | поддержка без развития |
 | Ansible напрямую | ansible-core 2.14+ и `community.general` | `ansible-playbook -i inventory.yml deploy.yml` | для технарей |
@@ -99,7 +103,13 @@ SSH-доступ к нему — пароль или ключ. Инструкц�
 **Windows:** скачайте `xrayvpn-<версия>-windows-x64-portable.exe` из
 [Releases](https://github.com/lifestreamy/xrayvpn/releases/latest) и запустите двойным кликом.
 
-**macOS (Apple Silicon):** скачайте `xrayvpn-<версия>-macos-arm64-portable`:
+**macOS (Apple Silicon)** — Homebrew:
+
+```bash
+brew install lifestreamy/tap/xrayvpn
+```
+
+Или скачайте `xrayvpn-<версия>-macos-arm64-portable`:
 
 ```bash
 chmod +x xrayvpn-*-macos-arm64-portable
