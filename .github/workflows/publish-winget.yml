@@ -1,0 +1,67 @@
+name: publish-winget
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Released tag to publish (manifests are rendered from its assets)
+        required: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: publish-winget
+  cancel-in-progress: false
+
+env:
+  WINGETCREATE_VERSION: "1.12.13.0"
+  WINGETCREATE_SHA256: "24042bd37915805615e6cf969ac57c6439124c3fe85823327f5f3fb24bd9ffea"
+
+jobs:
+  publish:
+    if: github.event_name == 'workflow_dispatch' || github.event.release.prerelease == false
+    runs-on: windows-latest
+    environment: winget
+    defaults:
+      run:
+        shell: pwsh
+    env:
+      TAG: ${{ github.event_name == 'release' && github.event.release.tag_name || inputs.tag }}
+      GH_REPO: ${{ github.repository }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Fetch the release checksums
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if ($env:TAG -notmatch '^v\d+\.\d+\.\d+$') { throw "not a plain release tag: $env:TAG" }
+          $latest = gh release list --exclude-drafts --exclude-pre-releases --limit 1 --json tagName --jq '.[0].tagName'
+          if (-not $latest) { throw "no published release found" }
+          if ($env:TAG -ne $latest) { throw "tag $env:TAG is not the latest release ($latest)" }
+          gh release download "$env:TAG" --pattern 'SHA256SUMS.txt' --dir sums
+      - name: Render the manifests
+        run: |
+          $manifestDir = (python scripts/cd/render_channels.py --print-winget-dir --tag "$env:TAG" --out build/channels).Trim()
+          "MANIFEST_DIR=$manifestDir" >> $env:GITHUB_ENV
+          python scripts/cd/render_channels.py --tag "$env:TAG" --sums sums/SHA256SUMS.txt --out build/channels
+      - name: Validate the rendered set
+        run: winget validate --manifest "$env:MANIFEST_DIR"
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: winget-manifests
+          path: build/channels/winget
+          if-no-files-found: error
+      - name: Install wingetcreate
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release download "v$env:WINGETCREATE_VERSION" --repo microsoft/winget-create --pattern wingetcreate.exe --dir tools
+          $actual = (Get-FileHash tools/wingetcreate.exe -Algorithm SHA256).Hash.ToLower()
+          if ($actual -ne $env:WINGETCREATE_SHA256) { throw "wingetcreate.exe sha256 mismatch: $actual" }
+      - name: Submit the pull request
+        env:
+          WINGET_CREATE_GITHUB_TOKEN: ${{ secrets.WINGET_TOKEN }}
+        run: .\tools\wingetcreate.exe submit --no-open "$env:MANIFEST_DIR"

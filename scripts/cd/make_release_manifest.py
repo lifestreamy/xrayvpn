@@ -1,4 +1,4 @@
-"""Write latest.json for the release assets (MYXRAY-31; used by the CI job).
+"""Write latest.json for the release assets (MYXRAY-31; used by the release-binaries job).
 
 The future self-update command consumes {version, date, release_url,
 assets{platform:{name,url,sha256}}}; this tag runs right after the artifacts
@@ -13,22 +13,7 @@ import hashlib
 import json
 from pathlib import Path
 
-
-def asset_key(name: str, version: str = "") -> str:
-    if name.endswith(".whl"):
-        return "wheel"
-    if name.endswith(".tar.gz"):
-        return "sdist"
-    stem = name.removeprefix("xrayvpn-")
-    if version:
-        stem = stem.removeprefix(f"{version}-")
-    stem = stem.removesuffix(".exe")
-    return stem.removesuffix("-portable")
-
-
-def normalized_version(tag: str) -> str:
-    version = tag.removeprefix("v")
-    return version.split("_", 1)[0]
+from release_common import asset_key, normalized_version
 
 
 def build_manifest(release: str, tag: str, directory: Path) -> dict[str, object]:

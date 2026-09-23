@@ -1,0 +1,12 @@
+# yaml-language-server: $schema=https://aka.ms/winget-manifest.installer.{{ManifestVersion}}.schema.json
+PackageIdentifier: {{PackageIdentifier}}
+PackageVersion: {{Version}}
+InstallerType: portable
+Commands:
+- {{PackageName}}
+Installers:
+- Architecture: x64
+  InstallerUrl: {{ReleaseBaseUrl}}/xrayvpn-{{Version}}-windows-x64-portable.exe
+  InstallerSha256: {{Sha256WindowsX64}}
+ManifestType: installer
+ManifestVersion: {{ManifestVersion}}

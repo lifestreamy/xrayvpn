@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=xrayvpn
+Comment=Provision Xray VLESS + REALITY VPN servers
+Exec=xrayvpn
+Terminal=true
+Icon=xrayvpn
+Categories=Network;Utility;

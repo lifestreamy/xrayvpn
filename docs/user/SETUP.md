@@ -18,11 +18,8 @@
 | Способ | Что делать | Комментарий |
 |---|---|---|
 | [Releases](https://github.com/lifestreamy/xrayvpn/releases/latest) | Скачать файл платформы и запустить | основной путь |
-| [pip](https://pypi.org/project/xrayvpn/) | `pip install xrayvpn` | любые ОС с Python |
-| apt | Репозиторий, `apt install xrayvpn` | Ubuntu / Debian |
-| Homebrew | `brew install lifestreamy/xrayvpn/xrayvpn` | macOS |
-| winget | `winget install xrayvpn` | Windows |
-| AUR | `xrayvpn-bin` | Arch Linux |
+| [pip](https://pypi.org/project/xrayvpn/) | `pip install xrayvpn` | любые ОС с Python 3.12+ |
+| apt | Репозиторий, `apt install xrayvpn` | Ubuntu 24.04 / Debian 12; подключение — в [README](../../README.md#быстрый-старт) |
 | Из репозитория | `uv run --project python-client xrayvpn deploy` | запуск из исходников |
 
 ## Первый запуск

@@ -21,10 +21,22 @@ General shipping rules. The process is short.
 ## Where releases ship
 - GitHub Releases — builds for every platform, wheel/sdist and checksums.
 - PyPI — `pip install xrayvpn`.
-- apt repository — `apt install xrayvpn` (Ubuntu / Debian).
+- apt repository — `apt install xrayvpn`; codenames noble (Ubuntu 24.04), bookworm (Debian 12).
 - Homebrew — a formula in a tap.
 - AUR — `xrayvpn-bin`.
 - winget — a manifest.
+
+How publishing per channel works and how to repair a channel — [`docs/dev/publishing/`](publishing/README.md).
+
+Connecting the apt repository (key fingerprint — `60DA D207 F0BE 147C 5830 D3D8 1BD4 9EC3 0480 57D3`):
+
+```bash
+sudo curl -fsSL -o /usr/share/keyrings/xrayvpn-archive-keyring.gpg \
+  https://lifestreamy.github.io/xrayvpn/apt/xrayvpn-archive-keyring.gpg
+echo "deb [signed-by=/usr/share/keyrings/xrayvpn-archive-keyring.gpg] https://lifestreamy.github.io/xrayvpn/apt/ $(. /etc/os-release; echo $VERSION_CODENAME) main" \
+  | sudo tee /etc/apt/sources.list.d/xrayvpn.list
+sudo apt update && sudo apt install xrayvpn
+```
 
 ## CHANGELOG
 - Kept per shipped version; entries are added by the release commit; format — Added / Changed /

@@ -17,11 +17,8 @@ Requirements: a VPS — fresh Ubuntu 20.04+ or Debian 11+, root or sudo, a publi
 | Way | What to do | Comment |
 |---|---|---|
 | [Releases](https://github.com/lifestreamy/xrayvpn/releases/latest) | Download the build for your platform and run it | the main path |
-| [pip](https://pypi.org/project/xrayvpn/) | `pip install xrayvpn` | any OS with Python |
-| apt | A repository, `apt install xrayvpn` | Ubuntu / Debian |
-| Homebrew | `brew install lifestreamy/xrayvpn/xrayvpn` | macOS |
-| winget | `winget install xrayvpn` | Windows |
-| AUR | `xrayvpn-bin` | Arch Linux |
+| [pip](https://pypi.org/project/xrayvpn/) | `pip install xrayvpn` | any OS with Python 3.12+ |
+| apt | A repository, `apt install xrayvpn` | Ubuntu 24.04 / Debian 12; setup — in the [README](../../README.en.md#quick-start) |
 | From the repository | `uv run --project python-client xrayvpn deploy` | running from source |
 
 ## First run

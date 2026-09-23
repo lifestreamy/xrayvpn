@@ -25,7 +25,7 @@
 
 ## Если ты просто хочешь развернуть VPN для себя
 
-Смело используй. Читай [README.md](README.md) / [README.en.md](README.en.md), запускай `provision-vpn.sh` или `Provision-VPN.ps1`, всё под лицензией разрешено.
+Смело используй. Читай [README.md](README.md) / [README.en.md](README.en.md), запускай готовую сборку из [Releases](https://github.com/lifestreamy/xrayvpn/releases/latest) или обёртки `shell-clients/bash/provision-vpn.sh` / `shell-clients/powershell/Provision-VPN.ps1` — всё под лицензией разрешено.
 
 ## Полный текст
 

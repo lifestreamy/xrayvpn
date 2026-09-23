@@ -12,6 +12,10 @@
 Первый запуск — в [../docs/user/SETUP.md](../docs/user/SETUP.md), раздел «Первый запуск».
 Как собрать самому (Nuitka onefile, режим отладки, smoke) — [BUILD.md](BUILD.md).
 
+Ещё варианты установки: `pip install xrayvpn` (Python 3.12+; на Debian/Ubuntu — `pipx install
+xrayvpn`) и apt-репозиторий — `apt install xrayvpn` (Ubuntu 24.04 / Debian 12; команды
+подключения — в [корневом README](../README.md#быстрый-старт)).
+
 Для работы с исходниками в репозитории нужен [uv](https://docs.astral.sh/uv/) (или Python 3.12+):
 
 ```powershell
