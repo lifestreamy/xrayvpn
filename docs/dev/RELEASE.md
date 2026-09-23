@@ -22,10 +22,22 @@
 ## Где публикуется релиз
 - GitHub Releases — сборки под все платформы, wheel/sdist и контрольные суммы.
 - PyPI — `pip install xrayvpn`.
-- apt-репозиторий — `apt install xrayvpn` (Ubuntu / Debian).
+- apt-репозиторий — `apt install xrayvpn`; кодовые имена noble (Ubuntu 24.04), bookworm (Debian 12).
 - Homebrew — формула в tap.
 - AUR — `xrayvpn-bin`.
 - winget — манифест.
+
+Устройство публикации по каналам и ремонт канала — [`docs/dev/publishing/`](publishing/README.md).
+
+Подключение apt-репозитория (отпечаток ключа — `60DA D207 F0BE 147C 5830 D3D8 1BD4 9EC3 0480 57D3`):
+
+```bash
+sudo curl -fsSL -o /usr/share/keyrings/xrayvpn-archive-keyring.gpg \
+  https://lifestreamy.github.io/xrayvpn/apt/xrayvpn-archive-keyring.gpg
+echo "deb [signed-by=/usr/share/keyrings/xrayvpn-archive-keyring.gpg] https://lifestreamy.github.io/xrayvpn/apt/ $(. /etc/os-release; echo $VERSION_CODENAME) main" \
+  | sudo tee /etc/apt/sources.list.d/xrayvpn.list
+sudo apt update && sudo apt install xrayvpn
+```
 
 ## CHANGELOG
 - Ведётся по выпущенным версиям; записи вносит релизный коммит; формат — Added / Changed / Fixed /
