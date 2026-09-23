@@ -1,0 +1,278 @@
+name: verify-channels
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/verify-channels.yml"
+      - "packaging/**"
+      - "scripts/cd/**"
+  schedule:
+    - cron: "23 6 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: verify-channels-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  GH_REPO: ${{ github.repository }}
+
+jobs:
+  pre-publish-winget:
+    if: github.event_name == 'pull_request'
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Render the manifests from the latest release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $tag = gh release list --exclude-drafts --exclude-pre-releases --limit 1 --json tagName --jq '.[0].tagName'
+          if (-not $tag) { throw "no published release to render from" }
+          gh release download $tag --pattern 'SHA256SUMS.txt' --dir sums
+          $manifestDir = (python scripts/cd/render_channels.py --print-winget-dir --tag $tag --out build/channels).Trim()
+          "MANIFEST_DIR=$manifestDir" >> $env:GITHUB_ENV
+          python scripts/cd/render_channels.py --tag $tag --sums sums/SHA256SUMS.txt --out build/channels
+      - name: Validate the manifests
+        run: winget validate --manifest "$env:MANIFEST_DIR"
+      - name: Install from the manifest
+        run: |
+          winget settings --enable LocalManifestFiles
+          winget install --manifest "$env:MANIFEST_DIR" --scope machine --accept-package-agreements --accept-source-agreements --disable-interactivity
+          "$env:ProgramFiles\WinGet\Links" >> $env:GITHUB_PATH
+      - name: Check the command alias
+        env:
+          XRAYVPN_UPDATE_CHECK: "0"
+        run: xrayvpn --version
+      - name: Uninstall
+        run: winget uninstall --manifest "$env:MANIFEST_DIR" --disable-interactivity
+
+  pre-publish-aur:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Render the package set from the latest release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          tag="$(gh release list --exclude-drafts --exclude-pre-releases --limit 1 --json tagName --jq '.[0].tagName')"
+          test -n "$tag"
+          mkdir -p build
+          gh release download "$tag" --pattern 'SHA256SUMS.txt' --dir build
+          curl -fsSL "https://raw.githubusercontent.com/${GH_REPO}/${tag}/LICENSE" -o build/LICENSE
+          python3 scripts/cd/render_channels.py --tag "$tag" --sums build/SHA256SUMS.txt --out build/channels --license build/LICENSE
+      - name: Build and lint in an Arch container
+        run: |
+          set -euo pipefail
+          docker run --rm \
+            -v "$PWD/build/channels/aur:/src:ro" \
+            -v "$PWD/scripts/cd/arch_container.sh:/arch_container.sh:ro" \
+            archlinux:latest bash /arch_container.sh build /src
+
+  pre-publish-brew:
+    if: github.event_name == 'pull_request'
+    runs-on: macos-14
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Render the formula from the latest release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          tag="$(gh release list --exclude-drafts --exclude-pre-releases --limit 1 --json tagName --jq '.[0].tagName')"
+          test -n "$tag"
+          mkdir -p build
+          gh release download "$tag" --pattern 'SHA256SUMS.txt' --dir build
+          python3 scripts/cd/render_channels.py --tag "$tag" --sums build/SHA256SUMS.txt --out build/channels
+      - name: Audit and install the formula
+        run: |
+          set -euo pipefail
+          brew tap-new local/verify
+          tap="$(brew --repository local/verify)"
+          mkdir -p "$tap/Formula"
+          cp build/channels/brew/xrayvpn.rb "$tap/Formula/xrayvpn.rb"
+          brew audit --strict --formula local/verify/xrayvpn
+          brew install local/verify/xrayvpn
+          XRAYVPN_UPDATE_CHECK=0 xrayvpn --version
+
+  latest:
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-24.04
+    outputs:
+      version: ${{ steps.tag.outputs.version }}
+    steps:
+      - name: Resolve the latest release
+        id: tag
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          latest="$(gh release list --exclude-drafts --exclude-pre-releases --limit 1 --json tagName --jq '.[0].tagName')"
+          test -n "$latest"
+          echo "version=${latest#v}" >> "$GITHUB_OUTPUT"
+
+  gate-summary:
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Report the channel gates
+        run: |
+          {
+            echo "### Channel gates"
+            echo ""
+            echo "| Channel | Gate |"
+            echo "|---|---|"
+            echo "| winget | ${{ vars.CHANNEL_WINGET_LIVE == 'true' && 'enabled' || 'skipped: CHANNEL_WINGET_LIVE is not true' }} |"
+            echo "| AUR | ${{ vars.CHANNEL_AUR_LIVE == 'true' && 'enabled' || 'skipped: CHANNEL_AUR_LIVE is not true' }} |"
+            echo "| Homebrew | ${{ vars.CHANNEL_BREW_LIVE == 'true' && 'enabled' || 'skipped: CHANNEL_BREW_LIVE is not true' }} |"
+            echo ""
+            echo "apt and PyPI are always checked; skipped channels are not verified in this run."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  post-publish-apt:
+    needs: latest
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Install from the apt repository
+        env:
+          EXPECTED_VERSION: ${{ needs.latest.outputs.version }}
+        run: |
+          set -euo pipefail
+          sudo curl -fsSL -o /usr/share/keyrings/xrayvpn-archive-keyring.gpg \
+            https://lifestreamy.github.io/xrayvpn/apt/xrayvpn-archive-keyring.gpg
+          echo "deb [signed-by=/usr/share/keyrings/xrayvpn-archive-keyring.gpg] https://lifestreamy.github.io/xrayvpn/apt/ $(. /etc/os-release; echo $VERSION_CODENAME) main" \
+            | sudo tee /etc/apt/sources.list.d/xrayvpn.list
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq xrayvpn
+          out="$(XRAYVPN_UPDATE_CHECK=0 xrayvpn --version)"
+          printf '%s\n' "$out"
+          printf '%s\n' "$out" | grep -qx "xrayvpn $EXPECTED_VERSION"
+
+  post-publish-apt-debian:
+    needs: latest
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Install from the apt repository (debian:12)
+        env:
+          EXPECTED_VERSION: ${{ needs.latest.outputs.version }}
+        run: |
+          set -euo pipefail
+          docker run --rm -e "EXPECTED_VERSION=$EXPECTED_VERSION" debian:12 bash -c '
+            set -euo pipefail
+            apt-get update -qq
+            apt-get install -y -qq curl ca-certificates gnupg >/dev/null
+            curl -fsSL -o /usr/share/keyrings/xrayvpn-archive-keyring.gpg https://lifestreamy.github.io/xrayvpn/apt/xrayvpn-archive-keyring.gpg
+            echo "deb [signed-by=/usr/share/keyrings/xrayvpn-archive-keyring.gpg] https://lifestreamy.github.io/xrayvpn/apt/ bookworm main" > /etc/apt/sources.list.d/xrayvpn.list
+            apt-get update -qq
+            apt-get install -y -qq xrayvpn
+            out="$(XRAYVPN_UPDATE_CHECK=0 xrayvpn --version)"
+            printf "%s\n" "$out"
+            printf "%s\n" "$out" | grep -qx "xrayvpn $EXPECTED_VERSION"
+          '
+
+  post-publish-pypi:
+    needs: latest
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Install from PyPI
+        env:
+          EXPECTED_VERSION: ${{ needs.latest.outputs.version }}
+        run: |
+          set -euo pipefail
+          python3 -m venv "$RUNNER_TEMP/venv"
+          "$RUNNER_TEMP/venv/bin/pip" install --quiet xrayvpn
+          cd "$RUNNER_TEMP"
+          out="$(XRAYVPN_UPDATE_CHECK=0 "$RUNNER_TEMP/venv/bin/xrayvpn" --version)"
+          printf '%s\n' "$out"
+          printf '%s\n' "$out" | grep -qx "xrayvpn $EXPECTED_VERSION"
+
+  post-publish-winget:
+    needs: latest
+    # Gate: set the repository variable CHANNEL_WINGET_LIVE=true after the winget PR is merged.
+    if: github.event_name != 'pull_request' && (github.event_name == 'workflow_dispatch' || vars.CHANNEL_WINGET_LIVE == 'true')
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - name: Install from winget
+        run: |
+          winget source update --disable-interactivity
+          winget install --id Lifestreamy.XrayVpn --exact --accept-package-agreements --accept-source-agreements --disable-interactivity
+          "$env:LOCALAPPDATA\Microsoft\WinGet\Links" >> $env:GITHUB_PATH
+      - name: Check the installed version
+        env:
+          XRAYVPN_UPDATE_CHECK: "0"
+          EXPECTED_VERSION: ${{ needs.latest.outputs.version }}
+        run: |
+          $expected = "xrayvpn $env:EXPECTED_VERSION"
+          $lines = @(xrayvpn --version | ForEach-Object { "$_".Trim() })
+          $lines
+          if ($lines -notcontains $expected) { throw "expected '$expected', got: $($lines -join ' | ')" }
+
+  post-publish-aur:
+    needs: latest
+    # Gate: set the repository variable CHANNEL_AUR_LIVE=true after the first AUR push.
+    if: github.event_name != 'pull_request' && (github.event_name == 'workflow_dispatch' || vars.CHANNEL_AUR_LIVE == 'true')
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Build and install from the AUR
+        env:
+          EXPECTED_VERSION: ${{ needs.latest.outputs.version }}
+        run: |
+          set -euo pipefail
+          git clone --depth 1 https://aur.archlinux.org/xrayvpn-bin.git "$RUNNER_TEMP/xrayvpn-bin"
+          docker run --rm \
+            -e "EXPECTED_VERSION=$EXPECTED_VERSION" \
+            -v "$RUNNER_TEMP/xrayvpn-bin:/src:ro" \
+            -v "$PWD/scripts/cd/arch_container.sh:/arch_container.sh:ro" \
+            archlinux:latest bash /arch_container.sh install /src
+
+  post-publish-brew:
+    needs: latest
+    # Gate: set the repository variable CHANNEL_BREW_LIVE=true after the first tap push.
+    if: github.event_name != 'pull_request' && (github.event_name == 'workflow_dispatch' || vars.CHANNEL_BREW_LIVE == 'true')
+    runs-on: macos-14
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Install from the tap
+        env:
+          EXPECTED_VERSION: ${{ needs.latest.outputs.version }}
+        run: |
+          set -euo pipefail
+          brew install lifestreamy/tap/xrayvpn
+          out="$(XRAYVPN_UPDATE_CHECK=0 xrayvpn --version)"
+          printf '%s\n' "$out"
+          printf '%s\n' "$out" | grep -qx "xrayvpn $EXPECTED_VERSION"

@@ -1,0 +1,27 @@
+# Maintainer: Tim Korelov <timkorelov@gmail.com>
+pkgname=xrayvpn-bin
+pkgver={{Version}}
+pkgrel=1
+pkgdesc="Provision and manage a self-hosted Xray VLESS + REALITY VPN server"
+arch=('x86_64')
+url="https://github.com/lifestreamy/xrayvpn"
+license=('AGPL-3.0-or-later')
+depends=('glibc' 'hicolor-icon-theme')
+provides=('xrayvpn')
+conflicts=('xrayvpn')
+options=('!strip' '!debug')
+source=("$pkgname-$pkgver::{{ReleaseBaseUrl}}/xrayvpn-$pkgver-linux-x64-portable"
+        "LICENSE::{{RawBaseUrl}}/LICENSE"
+        "xrayvpn.desktop"
+        "xrayvpn.png")
+sha256sums=('{{Sha256LinuxX64}}'
+            '{{LicenseSha256}}'
+            'SKIP'
+            'SKIP')
+
+package() {
+  install -Dm755 "$srcdir/$pkgname-$pkgver" "$pkgdir/usr/bin/xrayvpn"
+  install -Dm644 "$srcdir/LICENSE" "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+  install -Dm644 "$srcdir/xrayvpn.desktop" "$pkgdir/usr/share/applications/xrayvpn.desktop"
+  install -Dm644 "$srcdir/xrayvpn.png" "$pkgdir/usr/share/icons/hicolor/256x256/apps/xrayvpn.png"
+}

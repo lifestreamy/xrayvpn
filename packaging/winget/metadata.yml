@@ -1,0 +1,13 @@
+PackageIdentifier: Lifestreamy.XrayVpn
+PackageName: xrayvpn
+Publisher: Tim Korelov
+PublisherUrl: https://korelov.dev
+PublisherSupportUrl: https://github.com/lifestreamy/xrayvpn/issues
+Author: Tim Korelov
+PackageUrl: https://github.com/lifestreamy/xrayvpn
+License: AGPL-3.0-or-later
+LicenseUrl: https://github.com/lifestreamy/xrayvpn/blob/main/LICENSE
+Copyright: Copyright (C) 2026 Tim Korelov
+Moniker: xrayvpn
+DefaultLocale: en-US
+ManifestVersion: 1.10.0

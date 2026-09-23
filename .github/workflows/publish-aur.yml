@@ -1,0 +1,80 @@
+name: publish-aur
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Released tag to publish (PKGBUILD is rendered from its assets)
+        required: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: publish-aur
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    if: github.event_name == 'workflow_dispatch' || github.event.release.prerelease == false
+    runs-on: ubuntu-24.04
+    environment: aur
+    defaults:
+      run:
+        shell: bash
+    env:
+      TAG: ${{ github.event_name == 'release' && github.event.release.tag_name || inputs.tag }}
+      GH_REPO: ${{ github.repository }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Fetch the release checksums
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          [[ "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "not a plain release tag: $TAG" >&2; exit 1; }
+          latest="$(gh release list --exclude-drafts --exclude-pre-releases --limit 1 --json tagName --jq '.[0].tagName')"
+          test -n "$latest"
+          [ "$TAG" = "$latest" ] || { echo "tag $TAG is not the latest release ($latest)" >&2; exit 1; }
+          mkdir -p build
+          gh release download "$TAG" --pattern 'SHA256SUMS.txt' --dir build
+      - name: Fetch the LICENSE of the tag
+        run: |
+          set -euo pipefail
+          curl -fsSL "https://raw.githubusercontent.com/${GH_REPO}/${TAG}/LICENSE" -o build/LICENSE
+      - name: Render the package set
+        run: |
+          set -euo pipefail
+          python3 scripts/cd/render_channels.py --tag "$TAG" --sums build/SHA256SUMS.txt --out build/channels --license build/LICENSE
+      - name: Generate .SRCINFO in an Arch container
+        run: |
+          set -euo pipefail
+          docker run --rm \
+            -v "$PWD/build/channels/aur:/src" \
+            -v "$PWD/scripts/cd/arch_container.sh:/arch_container.sh:ro" \
+            archlinux:latest bash /arch_container.sh srcinfo /src
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: aur-package
+          path: build/channels/aur
+          if-no-files-found: error
+      - name: Push to the AUR
+        env:
+          AUR_SSH_PRIVATE_KEY: ${{ secrets.AUR_SSH_PRIVATE_KEY }}
+        run: |
+          set -euo pipefail
+          test -n "$AUR_SSH_PRIVATE_KEY"
+          install -d -m 700 ~/.ssh
+          install -m 600 .github/ssh/known_hosts ~/.ssh/known_hosts
+          eval "$(ssh-agent -s)"
+          printf '%s\n' "$AUR_SSH_PRIVATE_KEY" | ssh-add -
+          git clone ssh://aur@aur.archlinux.org/xrayvpn-bin.git aur-repo
+          cp build/channels/aur/PKGBUILD build/channels/aur/.SRCINFO build/channels/aur/xrayvpn.desktop build/channels/aur/xrayvpn.png aur-repo/
+          cd aur-repo
+          git config user.name "Tim Korelov"
+          git config user.email "timkorelov@gmail.com"
+          git add PKGBUILD .SRCINFO xrayvpn.desktop xrayvpn.png
+          git commit -m "upgpkg: xrayvpn-bin ${TAG#v}-1"
+          git push origin HEAD:master

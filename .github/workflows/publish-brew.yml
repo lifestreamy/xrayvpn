@@ -1,0 +1,70 @@
+name: publish-brew
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Released tag to publish (formula is rendered from its assets)
+        required: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: publish-brew
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    if: github.event_name == 'workflow_dispatch' || github.event.release.prerelease == false
+    runs-on: ubuntu-24.04
+    environment: brew
+    defaults:
+      run:
+        shell: bash
+    env:
+      TAG: ${{ github.event_name == 'release' && github.event.release.tag_name || inputs.tag }}
+      GH_REPO: ${{ github.repository }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Fetch the release checksums
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          [[ "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "not a plain release tag: $TAG" >&2; exit 1; }
+          latest="$(gh release list --exclude-drafts --exclude-pre-releases --limit 1 --json tagName --jq '.[0].tagName')"
+          test -n "$latest"
+          [ "$TAG" = "$latest" ] || { echo "tag $TAG is not the latest release ($latest)" >&2; exit 1; }
+          mkdir -p build
+          gh release download "$TAG" --pattern 'SHA256SUMS.txt' --dir build
+      - name: Render the formula
+        run: |
+          set -euo pipefail
+          python3 scripts/cd/render_channels.py --tag "$TAG" --sums build/SHA256SUMS.txt --out build/channels
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: brew-formula
+          path: build/channels/brew
+          if-no-files-found: error
+      - name: Push to the tap
+        env:
+          BREW_DEPLOY_KEY: ${{ secrets.BREW_DEPLOY_KEY }}
+        run: |
+          set -euo pipefail
+          test -n "$BREW_DEPLOY_KEY"
+          install -d -m 700 ~/.ssh
+          install -m 600 .github/ssh/known_hosts ~/.ssh/known_hosts
+          eval "$(ssh-agent -s)"
+          printf '%s\n' "$BREW_DEPLOY_KEY" | ssh-add -
+          git clone git@github.com:lifestreamy/homebrew-tap.git tap
+          mkdir -p tap/Formula
+          cp build/channels/brew/xrayvpn.rb tap/Formula/xrayvpn.rb
+          cd tap
+          git config user.name "Tim Korelov"
+          git config user.email "timkorelov@gmail.com"
+          git add Formula/xrayvpn.rb
+          git commit -m "xrayvpn ${TAG#v}"
+          git push origin HEAD:main

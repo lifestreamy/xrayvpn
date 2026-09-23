@@ -1,0 +1,34 @@
+# yaml-language-server: $schema=https://aka.ms/winget-manifest.defaultLocale.{{ManifestVersion}}.schema.json
+PackageIdentifier: {{PackageIdentifier}}
+PackageVersion: {{Version}}
+PackageLocale: {{DefaultLocale}}
+Publisher: {{Publisher}}
+PublisherUrl: {{PublisherUrl}}
+PublisherSupportUrl: {{PublisherSupportUrl}}
+Author: {{Author}}
+PackageName: {{PackageName}}
+PackageUrl: {{PackageUrl}}
+License: {{License}}
+LicenseUrl: {{LicenseUrl}}
+Copyright: {{Copyright}}
+ShortDescription: Console client that deploys and manages a self-hosted Xray VLESS + REALITY VPN server
+Description: |-
+  xrayvpn deploys a personal VPN server on your VPS: Xray-core with VLESS + REALITY, set up over a
+  single SSH connection — no domain or TLS certificate required. It also runs server maintenance
+  over SSH (status, logs, restart) and produces ready client profiles for Clash Verge, FlClash and
+  Amnezia. Ships as a single portable executable; no Python or extra runtimes needed.
+
+  Licensed under AGPL-3.0-or-later with an additional commercial-use restriction: free for
+  personal and non-commercial use, commercial use only with the author's written permission.
+Moniker: {{Moniker}}
+Tags:
+- vpn
+- xray
+- vless
+- reality
+- proxy
+- ansible
+- cli
+ReleaseNotesUrl: {{ReleaseNotesUrl}}
+ManifestType: defaultLocale
+ManifestVersion: {{ManifestVersion}}

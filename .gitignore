@@ -28,6 +28,7 @@ Thumbs.db
 .pytest_cache/
 
 # --- Binary builds ---
+build/
 python-client/build/
 python-client/dist/
 python-client/dist-binary/
