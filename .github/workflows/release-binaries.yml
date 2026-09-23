@@ -14,7 +14,7 @@ on:
       - "python-client/xrayvpn.spec"
       - "python-client/pyproject.toml"
       - "python-client/uv.lock"
-      - "scripts/ci/make_release_manifest.py"
+      - "scripts/cd/make_release_manifest.py"
   workflow_dispatch:
     inputs:
       ref:
@@ -278,7 +278,7 @@ jobs:
           case "$TAG" in
             *_experimental) ;;
             *_*) echo "unsupported release suffix for $TAG" >&2; exit 1 ;;
-            *) python3 ../scripts/ci/make_release_manifest.py --dir . --release "$REPOSITORY" --tag "$TAG" ;;
+            *) python3 ../scripts/cd/make_release_manifest.py --dir . --release "$REPOSITORY" --tag "$TAG" ;;
           esac
       - name: Draft release
         env:

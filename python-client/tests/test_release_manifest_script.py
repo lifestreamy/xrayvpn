@@ -1,12 +1,14 @@
-"""Tests for scripts/ci/make_release_manifest.py (CI glue, MYXRAY-31)."""
+"""Tests for scripts/cd/make_release_manifest.py (CD glue, MYXRAY-31)."""
 
 from __future__ import annotations
 
 import hashlib
 import importlib.util
+import sys
 from pathlib import Path
 
-_SCRIPT = Path(__file__).resolve().parents[2] / "scripts" / "ci" / "make_release_manifest.py"
+_SCRIPT = Path(__file__).resolve().parents[2] / "scripts" / "cd" / "make_release_manifest.py"
+sys.path.insert(0, str(_SCRIPT.parent))
 _spec = importlib.util.spec_from_file_location("make_release_manifest", _SCRIPT)
 assert _spec and _spec.loader
 manifest_mod = importlib.util.module_from_spec(_spec)
