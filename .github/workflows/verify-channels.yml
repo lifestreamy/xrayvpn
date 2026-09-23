@@ -51,7 +51,7 @@ jobs:
           XRAYVPN_UPDATE_CHECK: "0"
         run: xrayvpn --version
       - name: Uninstall
-        run: winget uninstall --manifest "$env:MANIFEST_DIR" --disable-interactivity
+        run: winget uninstall --manifest "$env:MANIFEST_DIR" --accept-source-agreements --disable-interactivity
 
   pre-publish-aur:
     if: github.event_name == 'pull_request'
@@ -223,7 +223,7 @@ jobs:
     steps:
       - name: Install from winget
         run: |
-          winget source update --disable-interactivity
+          winget source update -n winget --disable-interactivity
           winget install --id Lifestreamy.XrayVpn --exact --accept-package-agreements --accept-source-agreements --disable-interactivity
           "$env:LOCALAPPDATA\Microsoft\WinGet\Links" >> $env:GITHUB_PATH
       - name: Check the installed version
