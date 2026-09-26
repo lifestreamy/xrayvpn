@@ -38,6 +38,12 @@ echo "deb [signed-by=/usr/share/keyrings/xrayvpn-archive-keyring.gpg] https://li
 sudo apt update && sudo apt install xrayvpn
 ```
 
+Homebrew (macOS, Apple Silicon):
+
+```bash
+brew install lifestreamy/tap/xrayvpn
+```
+
 ## CHANGELOG
 - Kept per shipped version; entries are added by the release commit; format — Added / Changed /
   Fixed / Removed.

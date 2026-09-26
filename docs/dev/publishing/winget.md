@@ -61,6 +61,21 @@ If `wingetcreate submit` fails in the pipeline, the same command can be run loca
 wingetcreate.exe submit <manifest directory>
 ```
 
+## URL validation
+
+The validation pipeline checks the URLs in the manifest set — metadata URLs (`PublisherUrl`,
+`PublisherSupportUrl`, `PackageUrl`, `LicenseUrl`, `ReleaseNotesUrl`) and the installer URL — and
+fails the URL step with a `URL-Validation-Error` when one of them answers with an HTTP error; the
+comment names the URL and the status code, and the domain step that follows is skipped. A publisher
+site that is down or answers through a broken origin fails this way. The check runs from Azure IP
+ranges, so a server that blocks them fails it too.
+
+Fix the URL and re-run the validation; no manifest change is needed when the fix is on the site
+side. `@wingetbot run` is a moderator command — it re-runs the validation and strips the transient
+labels — so the re-run is requested from a moderator. The validation service also retries failed
+steps on its own schedule: a failed run is picked up again within a few hours, the transient labels
+are dropped, and the retry re-checks every URL.
+
 ## Verify and remove
 
 ```
