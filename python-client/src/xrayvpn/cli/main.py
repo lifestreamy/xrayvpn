@@ -725,12 +725,11 @@ def _run_remote(
             raise typer.Exit(2)
         resolved_host = selected
 
-    if not use_inventory:
-        resolved_host, resolved_user, resolved_port, alias_key = apply_ssh_config(
-            str(resolved_host), str(resolved_user), int(resolved_port)
-        )
-        if resolved_pkey is None and resolved_password is None and alias_key:
-            resolved_pkey = alias_key
+    resolved_host, resolved_user, resolved_port, alias_key = apply_ssh_config(
+        str(resolved_host), str(resolved_user), int(resolved_port)
+    )
+    if resolved_pkey is None and resolved_password is None and alias_key:
+        resolved_pkey = alias_key
 
     if resolved_pkey is not None and resolved_password is not None:
         typer.echo(i18n.t("MAIN_ERR_KEY_AND_PASS"), err=True)
