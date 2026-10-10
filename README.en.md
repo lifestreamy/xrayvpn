@@ -7,12 +7,12 @@
 
 # Xray Reality VPN Server — deployment
 
-[![release v0.4.1](assets/badges/release.svg?v=0.4.1)](https://github.com/lifestreamy/xrayvpn/releases/latest)
-[![brew v0.4.1](assets/badges/brew.svg?v=0.4.1)](https://github.com/lifestreamy/homebrew-tap)
+[![release v0.4.2](assets/badges/release.svg?v=0.4.1)](https://github.com/lifestreamy/xrayvpn/releases/latest)
+[![brew v0.4.2](assets/badges/brew.svg?v=0.4.1)](https://github.com/lifestreamy/homebrew-tap)
 [![winget soon](assets/badges/winget-en.svg)](https://github.com/microsoft/winget-pkgs/pull/440001)
-[![apt v0.4.1](assets/badges/apt.svg?v=0.4.1)](https://lifestreamy.github.io/xrayvpn/apt/)
-[![pip v0.4.1](assets/badges/pip.svg?v=0.4.1)](https://pypi.org/project/xrayvpn/)
-[![uv tool v0.4.1](assets/badges/uv.svg?v=0.4.1)](https://pypi.org/project/xrayvpn/)
+[![apt v0.4.2](assets/badges/apt.svg?v=0.4.1)](https://lifestreamy.github.io/xrayvpn/apt/)
+[![pip v0.4.2](assets/badges/pip.svg?v=0.4.1)](https://pypi.org/project/xrayvpn/)
+[![uv tool v0.4.2](assets/badges/uv.svg?v=0.4.1)](https://pypi.org/project/xrayvpn/)
 [![python 3.12+](assets/badges/python.svg)](python-client/README.en.md)
 [![license AGPL-3.0](assets/badges/license.svg)](LICENSE)
 

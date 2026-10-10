@@ -18,7 +18,7 @@ from pathlib import Path
 import pytest
 import typer.main
 
-from xrayvpn import __version__
+from xrayvpn import display_version
 from xrayvpn.cli.main import app
 
 CLIENT_ROOT = Path(__file__).resolve().parents[1]
@@ -121,7 +121,7 @@ def test_launcher_runs_end_to_end(path: Path) -> None:
         check=False,
     )
     assert result.returncode == 0, f"{path.name} launch failed:\n{result.stdout}\n{result.stderr}"
-    assert f"xrayvpn {__version__}" in result.stdout
+    assert f"xrayvpn {display_version()}" in result.stdout
 
 
 def test_shared_launcher_module_exists() -> None:

@@ -26,7 +26,7 @@ from typing import Annotated
 
 import typer
 
-from xrayvpn import __version__, i18n
+from xrayvpn import display_version, i18n
 from xrayvpn.cli import l10n_typer, prompts, repl, service, theme
 from xrayvpn.core import runtime_paths, update_check, wsl
 from xrayvpn.core.config import find_repo_root, load_settings, merge_overrides
@@ -106,7 +106,7 @@ def _d(key: str) -> str:
 
 def _version_callback(value: bool) -> None:
     if value:
-        typer.echo(f"xrayvpn {__version__}")
+        typer.echo(f"xrayvpn {display_version()}")
         hint = _update_hint()
         if hint:
             typer.echo(theme.muted(hint))

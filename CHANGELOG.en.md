@@ -11,6 +11,24 @@ Format:
 - Entries are built from commits and land in the release commit; no auto-bump.
 - The RU/EN pair is updated in the same commit; section structure is mirrored.
 
+## v0.4.2 — 2026-10-11
+
+### Added
+- The release date shows next to the version: the banner, `--version`, and the session's
+  `version` command.
+
+### Fixed
+- Windows: any remote action (`deploy`, `service`) died with `'charmap' codec can't decode
+  byte 0x9d`: fabric read `~/.ssh/config` with the locale codec and failed on non-ASCII
+  content. Fabric no longer reads ssh config — the client resolves aliases and passes
+  host/user/port/key explicitly.
+- Windows: same class — WSL output and ssh config are decoded explicitly (utf-8); localized
+  `wsl --status` output no longer breaks WSL detection.
+- Deploy: a `~/.ssh/config` alias in `ansible_host` of the personal `inventory.yml` resolves
+  again for remote deploys (parity with `service`).
+- REALITY: an empty short ID is no longer adopted from a legacy config or persisted in state;
+  the empty short ID stays allowed server-side, so already-issued profiles keep working.
+
 ## v0.4.1 — 2026-09-22
 
 There was no v0.4.0 release: this section covers the whole 0.4.x line.
