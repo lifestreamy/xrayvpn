@@ -32,7 +32,7 @@ def _load_ssh_config(
     if not path.is_file():
         return None
     try:
-        with path.open(encoding="utf-8") as handle:
+        with path.open(encoding="utf-8", errors="replace") as handle:
             return paramiko.SSHConfig.from_file(handle)
     except OSError:
         return None

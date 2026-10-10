@@ -24,7 +24,6 @@ def wsl_available() -> bool:
         result = subprocess.run(
             ["wsl.exe", "--status"],
             capture_output=True,
-            text=True,
             timeout=30,
             check=False,
         )
@@ -39,7 +38,9 @@ def wsl_home(distro: str | None = None) -> str:
     if distro:
         cmd += ["-d", distro]
     cmd += ["bash", "-lc", 'echo "$HOME"']
-    result = subprocess.run(cmd, capture_output=True, text=True, timeout=30, check=True)
+    result = subprocess.run(
+        cmd, capture_output=True, encoding="utf-8", errors="replace", timeout=30, check=True
+    )
     return result.stdout.strip()
 
 
