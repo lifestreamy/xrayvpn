@@ -120,7 +120,13 @@
 - name: Extract identity from existing config
   ansible.builtin.set_fact:
     migrated_private_key: "{{ existing_config.inbounds[0].streamSettings.realitySettings.privateKey }}"
-    migrated_short_id: "{{ existing_config.inbounds[0].streamSettings.realitySettings.shortIds[0] }}"
+    # First NON-empty marker: early configs could carry ["", "<marker>"], and taking
+    # [0] verbatim leaked the empty value into state (2026-09-29).
+    migrated_short_id: >-
+      {{
+        (existing_config.inbounds[0].streamSettings.realitySettings.shortIds | default([])
+         | reject('equalto', '') | list | first) | default('')
+      }}
     migrated_uuids: "{{ existing_config.inbounds[0].settings.clients | map(attribute='id') | list }}"
   when: xray_do_migration | bool
   tags: config
@@ -329,7 +335,7 @@
 
 - name: Generate random short ID
   ansible.builtin.set_fact:
-    fresh_short_id: "{{ lookup('password', '/dev/null chars=hexdigits length=8') }}"
+    fresh_short_id: "{{ lookup('password', '/dev/null chars=hexdigits length=8') | lower }}"
   when: xray_generate_identity | bool
   tags: config
 
@@ -377,6 +383,24 @@
       short_id: "{{ fresh_short_id }}"
       client_uuids: "{{ fresh_uuids }}"
   when: xray_generate_identity | bool
+  tags: config
+
+# Historical adoptions could persist an empty marker; heal it on the next run.
+- name: Replace an empty short ID with a generated one
+  ansible.builtin.set_fact:
+    reality_state: "{{ reality_state | combine({'short_id': lookup('password', '/dev/null chars=hexdigits length=8') | lower}) }}"
+    reality_short_id_healed: true
+  when:
+    - reality_state is defined
+    - (reality_state.short_id | default('') | length) == 0
+  tags: config
+
+- name: Persist the healed short ID
+  ansible.builtin.copy:
+    content: "{{ reality_state | to_nice_json }}"
+    dest: "{{ xray_config_dir }}/reality-state.json"
+    mode: '0600'
+  when: reality_short_id_healed | default(false) | bool
   tags: config
 
 # Append-only: never truncates stored UUIDs.

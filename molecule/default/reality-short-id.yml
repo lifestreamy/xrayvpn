@@ -1,0 +1,208 @@
+---
+# Shared shortId checks (imported by molecule/default and molecule/distro verify).
+# Coverage for the 2026-09-29 fix: an empty REALITY marker must never be adopted
+# from a legacy config or persist in the state; the server keeps allowing the
+# empty marker for backward compatibility with already-issued profiles.
+
+- name: Read the deployed REALITY state
+  ansible.builtin.slurp:
+    src: "{{ xray_config_dir }}/reality-state.json"
+  register: sid_state_raw
+  changed_when: false
+
+- name: Read the deployed Xray config
+  ansible.builtin.slurp:
+    src: "{{ xray_config_dir }}/config.json"
+  register: sid_cfg_raw
+  changed_when: false
+
+- name: Read the deployed client configs
+  ansible.builtin.slurp:
+    src: "{{ item }}"
+  register: sid_clients_raw
+  changed_when: false
+  loop:
+    - "{{ xray_client_configs_dir }}/client_0.json"
+    - "{{ xray_client_configs_dir }}/clash_client_0.yaml"
+
+- name: Assert the deployed marker is an 8-hex string
+  ansible.builtin.assert:
+    that:
+      - sid_state.short_id is match('^[0-9a-fA-F]{8}$')
+    fail_msg: >-
+      reality-state.json short_id must be a non-empty 8-hex marker,
+      got {{ sid_state.short_id | default('<missing>') }}
+  vars:
+    sid_state: "{{ sid_state_raw.content | b64decode | from_json }}"
+
+- name: Assert the server config allows the marker plus the legacy empty marker
+  ansible.builtin.assert:
+    that:
+      - sid_state.short_id in sid_ids
+      - "'' in sid_ids"
+    fail_msg: >-
+      config.json shortIds must contain the marker and the legacy empty
+      allowance, got {{ sid_ids }}
+  vars:
+    sid_state: "{{ sid_state_raw.content | b64decode | from_json }}"
+    sid_cfg: "{{ sid_cfg_raw.content | b64decode | from_json }}"
+    sid_ids: "{{ sid_cfg.inbounds[0].streamSettings.realitySettings.shortIds }}"
+
+- name: Assert the client configs carry the deployed marker
+  ansible.builtin.assert:
+    that:
+      - "sid_clients_text is search(sid_state.short_id)"
+    fail_msg: "client configs must carry the deployed shortId"
+  vars:
+    sid_state: "{{ sid_state_raw.content | b64decode | from_json }}"
+    sid_clients_text: >-
+      {{ sid_clients_raw.results | map(attribute='content') | map('b64decode') | join('\n') }}
+
+# --- adoption/heal sub-cases: run the role's own identity stage in a scratch dir ---
+
+- name: Resolve the xray CLI command for the scratch identity runs
+  ansible.builtin.set_fact:
+    sid_cli: >-
+      {{ '/usr/local/bin/xray'
+         if (xray_runtime | default('native')) == 'native'
+         else 'docker run --rm ' ~ (xray_docker_image
+              if (xray_docker_image | default('') | length > 0)
+              else (xray_container_repo ~ ':' ~ xray_version)) ~ ' xray' }}
+
+- name: Create the shortId scratch workspace
+  ansible.builtin.file:
+    path: /tmp/reality-short-id-check
+    state: directory
+    mode: '0700'
+
+- name: Generate a throwaway identity in the scratch workspace
+  ansible.builtin.import_tasks: ../../roles/xray_vpn/tasks/keys.yml
+  vars:
+    xray_config_dir: /tmp/reality-short-id-check
+    xray_cli_command: "{{ sid_cli }}"
+    num_clients: 1
+    xray_reality_rotate: false
+
+- name: Read the throwaway identity
+  ansible.builtin.slurp:
+    src: /tmp/reality-short-id-check/reality-state.json
+  register: sid_seed_raw
+  changed_when: false
+
+- name: Remove the scratch state to force the legacy-migration path
+  ansible.builtin.file:
+    path: /tmp/reality-short-id-check/reality-state.json
+    state: absent
+
+- name: Seed a legacy config whose first marker is empty
+  ansible.builtin.copy:
+    content: "{{ sid_legacy_cfg | to_nice_json }}"
+    dest: /tmp/reality-short-id-check/config.json
+    mode: '0600'
+  vars:
+    sid_seed: "{{ sid_seed_raw.content | b64decode | from_json }}"
+    sid_legacy_cfg:
+      inbounds:
+        - streamSettings:
+            realitySettings:
+              privateKey: "{{ sid_seed.private_key }}"
+              shortIds: ["", "deadbeef"]
+          settings:
+            clients:
+              - id: "{{ sid_seed.client_uuids[0] }}"
+
+- name: Adopt the legacy identity (role machinery)
+  ansible.builtin.import_tasks: ../../roles/xray_vpn/tasks/keys.yml
+  vars:
+    xray_config_dir: /tmp/reality-short-id-check
+    xray_cli_command: "{{ sid_cli }}"
+    num_clients: 1
+    xray_reality_rotate: false
+
+- name: Read the adopted state
+  ansible.builtin.slurp:
+    src: /tmp/reality-short-id-check/reality-state.json
+  register: sid_adopted_raw
+  changed_when: false
+
+- name: Assert legacy adoption picked the first NON-empty marker
+  ansible.builtin.assert:
+    that:
+      - (sid_adopted_raw.content | b64decode | from_json).short_id == 'deadbeef'
+    fail_msg: "legacy adoption must skip the empty marker and take 'deadbeef'"
+
+- name: Seed a legacy config that only allows the empty marker
+  ansible.builtin.copy:
+    content: "{{ sid_empty_cfg | to_nice_json }}"
+    dest: /tmp/reality-short-id-check/config.json
+    mode: '0600'
+  vars:
+    sid_adopted: "{{ sid_adopted_raw.content | b64decode | from_json }}"
+    sid_empty_cfg:
+      inbounds:
+        - streamSettings:
+            realitySettings:
+              privateKey: "{{ sid_adopted.private_key }}"
+              shortIds: [""]
+          settings:
+            clients:
+              - id: "{{ sid_adopted.client_uuids[0] }}"
+
+- name: Remove the scratch state again (force a fresh adoption)
+  ansible.builtin.file:
+    path: /tmp/reality-short-id-check/reality-state.json
+    state: absent
+
+- name: Adopt the empty-only legacy identity (role machinery)
+  ansible.builtin.import_tasks: ../../roles/xray_vpn/tasks/keys.yml
+  vars:
+    xray_config_dir: /tmp/reality-short-id-check
+    xray_cli_command: "{{ sid_cli }}"
+    num_clients: 1
+    xray_reality_rotate: false
+
+- name: Read the regenerated state
+  ansible.builtin.slurp:
+    src: /tmp/reality-short-id-check/reality-state.json
+  register: sid_regenerated_raw
+  changed_when: false
+
+- name: Assert an empty-only legacy identity gets a generated marker
+  ansible.builtin.assert:
+    that:
+      - (sid_regenerated_raw.content | b64decode | from_json).short_id is match('^[0-9a-f]{8}$')
+    fail_msg: "an empty-only legacy marker must be replaced by a generated one"
+
+- name: Seed an existing state with an empty marker (historical adoption)
+  ansible.builtin.copy:
+    content: "{{ sid_heal_cfg | to_nice_json }}"
+    dest: /tmp/reality-short-id-check/reality-state.json
+    mode: '0600'
+  vars:
+    sid_regenerated: "{{ sid_regenerated_raw.content | b64decode | from_json }}"
+    sid_heal_cfg: "{{ sid_regenerated | combine({'short_id': ''}) }}"
+
+- name: Re-run the identity stage over the empty-marker state (heal path)
+  ansible.builtin.import_tasks: ../../roles/xray_vpn/tasks/keys.yml
+  vars:
+    xray_config_dir: /tmp/reality-short-id-check
+    xray_cli_command: "{{ sid_cli }}"
+    num_clients: 1
+    xray_reality_rotate: false
+
+- name: Read the healed state
+  ansible.builtin.slurp:
+    src: /tmp/reality-short-id-check/reality-state.json
+  register: sid_healed_raw
+  changed_when: false
+
+- name: Assert an existing state with an empty marker is healed
+  ansible.builtin.assert:
+    that:
+      - (sid_healed_raw.content | b64decode | from_json).short_id is match('^[0-9a-f]{8}$')
+    fail_msg: "an existing state with an empty marker must be healed on the next run"
+
+- name: Remove the shortId scratch workspace
+  ansible.builtin.file:
+    path: /tmp/reality-short-id-check
+    state: absent
