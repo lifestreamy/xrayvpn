@@ -100,3 +100,18 @@ def test_ssh_config_entry_exposes_raw_lookup(tmp_path: Path) -> None:
     assert bare and bare["hostname"] == "203.0.113.10"
     assert ssh_config_entry("plain.example", config_path=cfg) is None
     assert ssh_config_entry("h", config_path=tmp_path / "missing") is None
+
+
+def test_cp1251_config_still_resolves(tmp_path: Path) -> None:
+    cfg = tmp_path / "ssh_config"
+    cfg.write_bytes(
+        (
+            "Host myvps\n"
+            "  HostName 203.0.113.9\n"
+            "  User admin\n"
+            "  Port 2222\n"
+            "  # русский комментарий\n"
+        ).encode("cp1251")
+    )
+    host, user, port, identity = apply_ssh_config("myvps", "root", 22, config_path=cfg)
+    assert (host, user, port, identity) == ("203.0.113.9", "admin", 2222, None)

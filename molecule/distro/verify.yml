@@ -60,6 +60,9 @@
       register: client_yaml
       failed_when: not client_yaml.stat.exists
 
+    - name: Run shared shortId checks (adoption/heal coverage)
+      ansible.builtin.import_tasks: ../default/reality-short-id.yml
+
     - name: Run mihomo end-to-end handshake (shared with molecule/default)
       ansible.builtin.import_tasks: ../default/e2e.yml
       when: xray_e2e_enabled | default(false)

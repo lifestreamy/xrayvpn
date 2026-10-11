@@ -115,7 +115,7 @@ def test_bare_ip_without_auth_prompts_password(monkeypatch, tmp_path) -> None:
     assert "secret" not in _output(result)
 
 
-def test_use_inventory_does_not_apply_ssh_config(monkeypatch, tmp_path) -> None:
+def test_local_use_inventory_does_not_apply_ssh_config(monkeypatch, tmp_path) -> None:
     _stub_local_mode(monkeypatch, tmp_path)
     (tmp_path / "inventory.yml").write_text(
         "all:\n"

@@ -19,7 +19,7 @@ from collections.abc import Callable, Mapping, Sequence
 
 import typer
 
-from xrayvpn import __version__, i18n
+from xrayvpn import __version__, display_version, i18n
 from xrayvpn.cli import l10n_typer, prompts, theme
 from xrayvpn.core.update_check import LATEST_RELEASE_PAGE, PROFILE_URL, REPO_URL
 
@@ -215,7 +215,7 @@ def _narrow_screen(version: str, width: int) -> str:
     """No boxes when the terminal is too narrow for them."""
     lines = [
         theme.accent(i18n.t("REPL_WELCOME_TITLE")),
-        f"v{version}",
+        f"v{display_version(version)}",
         i18n.t("REPL_WELCOME_PURPOSE"),
         "",
         i18n.t("REPL_WELCOME_MAIN"),
@@ -268,7 +268,7 @@ def welcome_screen(version: str = __version__) -> str:
     credits = _box(_credits_lines(), color=theme.muted, max_width=inner)
     lines = [
         theme.accent(i18n.t("REPL_WELCOME_TITLE")),
-        f"v{version}",
+        f"v{display_version(version)}",
         i18n.t("REPL_WELCOME_PURPOSE"),
         "",
     ]
@@ -372,7 +372,7 @@ def _session(
                 print(lang_notice())
                 typer.echo(welcome_screen(version))
             if "--version" in options:
-                print(f"xrayvpn {version}")
+                print(f"xrayvpn {display_version(version)}")
             unknown = options - {"--ru", "--version"}
             if unknown:
                 joined = ", ".join(sorted(unknown))
@@ -382,7 +382,7 @@ def _session(
             if command == "help":
                 print(help_text())
             elif command == "version":
-                print(f"xrayvpn {version}")
+                print(f"xrayvpn {display_version(version)}")
             elif command == "lang":
                 _switch_lang(tokens[1:], version)
             elif command == "banner":

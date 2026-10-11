@@ -25,6 +25,6 @@ if [ "$mode" = "install" ]; then
   out="$(XRAYVPN_UPDATE_CHECK=0 xrayvpn --version)"
   printf '%s\n' "$out"
   if [ -n "${EXPECTED_VERSION:-}" ]; then
-    printf '%s\n' "$out" | grep -qx "xrayvpn $EXPECTED_VERSION"
+    printf '%s\n' "$out" | grep -Eqx "xrayvpn $EXPECTED_VERSION( \([0-9]{4}-[0-9]{2}-[0-9]{2}\))?"
   fi
 fi

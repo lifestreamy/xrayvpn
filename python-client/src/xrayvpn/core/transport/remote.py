@@ -13,7 +13,7 @@ from pathlib import Path
 from typing import Protocol, Self
 
 import paramiko
-from fabric import Connection
+from fabric import Config, Connection
 
 
 class SshConnectError(RuntimeError):
@@ -79,6 +79,9 @@ class FabricRemote:
             port=port,
             connect_timeout=connect_timeout,
             connect_kwargs=connect_kwargs or None,
+            # An explicit config stops fabric from reading ~/.ssh/config itself:
+            # its loader uses the locale codec (cp1252 on Windows) and dies on non-ASCII.
+            config=Config(ssh_config=paramiko.SSHConfig()),
         )
         self._open = False
 

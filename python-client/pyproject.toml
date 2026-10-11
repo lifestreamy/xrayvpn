@@ -1,6 +1,6 @@
 [project]
 name = "xrayvpn"
-version = "0.4.1"
+version = "0.4.2"
 description = "Python client for provisioning Xray VLESS + REALITY VPN servers (local and remote execution)"
 readme = "README.md"
 requires-python = ">=3.12"
