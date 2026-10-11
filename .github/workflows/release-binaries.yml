@@ -102,7 +102,7 @@ jobs:
           try {
             $out = (& $exe --version | Out-String)
             $head = ($out -split "`r?`n")[0].Trim()
-            if ($head -ne "xrayvpn $version") { throw "--version check failed: '$head'" }
+            if (($head -replace ' \(\d{4}-\d{2}-\d{2}\)$', '') -ne "xrayvpn $version") { throw "--version check failed: '$head'" }
             $dry = (& $exe deploy --dry-run --no-interactive --host 127.0.0.1 | Out-String)
             if ($LASTEXITCODE -ne 0) { throw "dry-run failed (rc=$LASTEXITCODE)" }
             foreach ($marker in @("deploy.yml", "roles/", "config/")) {
