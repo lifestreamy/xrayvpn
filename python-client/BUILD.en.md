@@ -1,7 +1,7 @@
 # Building standalone xrayvpn binaries
 
 Summary: `xrayvpn` is packaged by Nuitka (`--mode=onefile`) into a single
-executable `xrayvpn-<os>-<arch>[.exe]` carrying the bundled payload (`roles/`,
+executable `xrayvpn-<version>-<os>-<arch>-portable[.exe]` carrying the bundled payload (`roles/`,
 `config/`, `deploy.yml`, `inventory.yml.example` → `xrayvpn/payload/…`; the same
 allowlist used for server uploads). The PyInstaller spec `xrayvpn.spec` is a
 fallback with the identical payload contract (shared staging in `build_support.py`).
@@ -29,7 +29,7 @@ fallback with the identical payload contract (shared staging in `build_support.p
 ```
 
 Artifacts land in `dist-binary/`. Contract: identical payload paths for both
-engines, `--version` = the version passed, file name = `xrayvpn-<os>-<arch>[.exe]`.
+engines, `--version` = the version passed, file name = `xrayvpn-<version>-<os>-<arch>-portable[.exe]`.
 
 ## Debug loop
 

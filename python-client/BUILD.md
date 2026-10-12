@@ -1,7 +1,7 @@
 # Сборка standalone-приложения xrayvpn
 
 Суть: `xrayvpn` упаковывается Nuitka (`--mode=onefile`) в один исполняемый
-файл `xrayvpn-<os>-<arch>[.exe]` с bundled payload (`roles/`, `config/`, `deploy.yml`,
+файл `xrayvpn-<version>-<os>-<arch>-portable[.exe]` с bundled payload (`roles/`, `config/`, `deploy.yml`,
 `inventory.yml.example` → `xrayvpn/payload/…`; тот же allowlist, что у загрузки на сервер).
 PyInstaller-спека `xrayvpn.spec` — фолбэк с тем же контрактом payload
 (общий staging из `build_support.py`).
@@ -29,7 +29,7 @@ PyInstaller-спека `xrayvpn.spec` — фолбэк с тем же контр
 ```
 
 Артефакты — `dist-binary/`. Контракт: одинаковые payload-пути у обоих движков,
-`--version` = переданная версия, имя файла = `xrayvpn-<os>-<arch>[.exe]`.
+`--version` = переданная версия, имя файла = `xrayvpn-<version>-<os>-<arch>-portable[.exe]`.
 
 ## Цикл отладки
 
