@@ -11,6 +11,7 @@ import hashlib
 import io
 import json
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
@@ -417,3 +418,64 @@ def test_perform_standalone_update_missing_target_probes_nothing(tmp_path: Path)
             http=http,
         )
     assert http.urls == []
+
+
+def test_manager_plan_execute_only_uv_and_pipx() -> None:
+    uv = upd.manager_plan(upd.UV_TOOL)
+    pipx = upd.manager_plan(upd.PIPX)
+    assert uv is not None and uv.executable
+    assert pipx is not None and pipx.executable
+    assert uv.commands == (("uv", "tool", "upgrade", "xrayvpn"),)
+    for kind in (upd.PIP, upd.BREW, upd.APT, upd.PACMAN, upd.WINGET):
+        plan = upd.manager_plan(kind)
+        assert plan is not None and not plan.executable
+    assert upd.manager_plan(upd.UNKNOWN) is None
+    assert upd.manager_plan(upd.STANDALONE) is None
+
+
+def test_manager_plan_apt_and_winget_shapes() -> None:
+    apt = upd.manager_plan(upd.APT)
+    assert apt is not None
+    assert apt.commands[0][:2] == ("sudo", "apt")
+    winget = upd.manager_plan(upd.WINGET)
+    assert winget is not None
+    assert "--exact" in winget.commands[0]
+    assert "Lifestreamy.XrayVpn" in winget.commands[0]
+
+
+def test_pin_hints() -> None:
+    assert upd.pin_hint(upd.PIP, "0.4.2") == 'python -m pip install "xrayvpn==0.4.2"'
+    assert upd.pin_hint(upd.UV_TOOL, "0.4.2") == "uv tool install xrayvpn==0.4.2"
+    assert upd.pin_hint(upd.BREW, "0.4.2") == "brew pin xrayvpn"
+    assert upd.pin_hint(upd.UNKNOWN, "0.4.2") is None
+    assert upd.pin_hint(upd.STANDALONE, "0.4.2") is None
+
+
+def test_run_manager_command_executes_only_allowed_kinds() -> None:
+    calls: list[list[str]] = []
+
+    def runner(argv: list[str], **kwargs: object) -> object:
+        calls.append(argv)
+        return SimpleNamespace(returncode=0)
+
+    rc = upd.run_manager_command(upd.PIPX, ["pipx", "upgrade", "xrayvpn"], runner=runner)
+    assert rc == 0
+    assert calls == [["pipx", "upgrade", "xrayvpn"]]
+    with pytest.raises(upd.UpdateError):
+        upd.run_manager_command(upd.PIP, ["python", "-m", "pip", "install", "xrayvpn"], runner=runner)
+    assert len(calls) == 1
+
+
+def test_run_manager_command_wraps_failures() -> None:
+    def runner(argv: list[str], **kwargs: object) -> object:
+        raise OSError("exec format error")
+
+    with pytest.raises(upd.UpdateError):
+        upd.run_manager_command(upd.UV_TOOL, ["uv", "tool", "upgrade", "xrayvpn"], runner=runner)
+
+
+def test_run_manager_command_reports_returncode() -> None:
+    def runner(argv: list[str], **kwargs: object) -> object:
+        return SimpleNamespace(returncode=5)
+
+    assert upd.run_manager_command(upd.PIPX, ["pipx", "upgrade", "xrayvpn"], runner=runner) == 5

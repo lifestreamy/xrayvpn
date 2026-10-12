@@ -16,12 +16,24 @@ import os
 import subprocess
 import urllib.error
 import urllib.request
-from collections.abc import Callable, Mapping
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 from typing import IO, Any
 
-from xrayvpn.core import update_check
+from xrayvpn.core import install_source, update_check
+
+STANDALONE = install_source.STANDALONE
+DEV = install_source.DEV
+UV_TOOL = install_source.UV_TOOL
+PIPX = install_source.PIPX
+PIP = install_source.PIP
+PIP_DIRECT = install_source.PIP_DIRECT
+BREW = install_source.BREW
+APT = install_source.APT
+PACMAN = install_source.PACMAN
+WINGET = install_source.WINGET
+UNKNOWN = install_source.UNKNOWN
 
 RELEASES_API_URL = f"https://api.github.com/repos/{update_check.RELEASE_OWNER_REPO}/releases"
 RELEASE_DOWNLOAD_BASE = f"https://github.com/{update_check.RELEASE_OWNER_REPO}/releases/download"
@@ -403,3 +415,68 @@ def _resolve_release(
     if release is None:
         raise UpdateError("no stable release found")
     return release
+
+
+MANAGER_TIMEOUT_SECONDS = 1800.0
+EXECUTABLE_KINDS = frozenset({UV_TOOL, PIPX})
+
+_MANAGER_COMMANDS: dict[str, tuple[tuple[str, ...], ...]] = {
+    UV_TOOL: (("uv", "tool", "upgrade", "xrayvpn"),),
+    PIPX: (("pipx", "upgrade", "xrayvpn"),),
+    PIP: (("python", "-m", "pip", "install", "--upgrade", "xrayvpn"),),
+    BREW: (("brew", "upgrade", "xrayvpn"),),
+    APT: (
+        ("sudo", "apt", "update"),
+        ("sudo", "apt", "install", "--only-upgrade", "xrayvpn"),
+    ),
+    WINGET: (("winget", "upgrade", "--id", "Lifestreamy.XrayVpn", "--exact", "--source", "winget"),),
+    PACMAN: (("yay", "-S", "xrayvpn-bin"),),
+}
+
+_PIN_HINTS = {
+    PIP: 'python -m pip install "xrayvpn=={version}"',
+    UV_TOOL: "uv tool install xrayvpn=={version}",
+    PIPX: 'pipx install --force "xrayvpn=={version}"',
+    BREW: "brew pin xrayvpn",
+    APT: "sudo apt install xrayvpn={version} && sudo apt-mark hold xrayvpn",
+    WINGET: "winget pin add --id Lifestreamy.XrayVpn --version {version}",
+    PACMAN: "yay -S xrayvpn-bin",
+}
+
+
+@dataclass(frozen=True)
+class ManagerPlan:
+    kind: str
+    commands: tuple[tuple[str, ...], ...]
+    executable: bool
+
+
+def manager_plan(kind: str) -> ManagerPlan | None:
+    commands = _MANAGER_COMMANDS.get(kind)
+    if commands is None:
+        return None
+    return ManagerPlan(kind=kind, commands=commands, executable=kind in EXECUTABLE_KINDS)
+
+
+def pin_hint(kind: str, version: str) -> str | None:
+    template = _PIN_HINTS.get(kind)
+    if template is None:
+        return None
+    return template.format(version=version)
+
+
+def run_manager_command(
+    kind: str,
+    command: Sequence[str],
+    *,
+    runner: Callable[[list[str]], Any] | None = None,
+    timeout: float = MANAGER_TIMEOUT_SECONDS,
+) -> int:
+    if kind not in EXECUTABLE_KINDS:
+        raise UpdateError(f"refusing to run {kind} commands automatically")
+    run = runner or subprocess.run
+    try:
+        result = run(list(command), check=False, timeout=timeout)
+    except (OSError, subprocess.SubprocessError) as exc:
+        raise UpdateError(f"manager command failed: {' '.join(command)}: {exc}") from exc
+    return int(getattr(result, "returncode", 1))
