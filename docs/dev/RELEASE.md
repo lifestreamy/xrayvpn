@@ -45,6 +45,13 @@ Homebrew (macOS, Apple Silicon):
 brew install lifestreamy/tap/xrayvpn
 ```
 
+## Бейджи
+- Бейджи в README обновляются автоматически при публикации релиза (пайплайн `badges.yml`):
+  SVG рендерятся из тега, `?v=` в README сдвигается, обновления уходят бот-коммитом в main.
+- winget-бейдж показывает версию только при `CHANNEL_WINGET_LIVE=true` (переменная репозитория),
+  иначе — «скоро»/«soon».
+- Ремонт без релиза — ручной запуск с `v`-тегом (вкладка Actions, вход `tag`).
+
 ## CHANGELOG
 - Ведётся по выпущенным версиям; записи вносит релизный коммит; формат — Added / Changed / Fixed /
   Removed.

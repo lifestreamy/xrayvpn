@@ -1,0 +1,68 @@
+---
+# README badges: renders the SVG set from the release tag, bumps the ?v= query
+# in both READMEs (a fresh URL bypasses the image cache) and commits the result
+# to main as the bot; the winget badge flips to the version only when the
+# repository variable CHANNEL_WINGET_LIVE is true (same gate as verify-channels).
+# Triggers: release (published), workflow_dispatch (repair; the v prefix is required).
+
+name: badges
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Released tag to render the badges from (the v prefix is required)
+        required: true
+
+permissions:
+  contents: write
+
+concurrency:
+  group: badges
+  cancel-in-progress: false
+
+jobs:
+  render:
+    if: github.event_name == 'workflow_dispatch' || github.event.release.prerelease == false
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    defaults:
+      run:
+        shell: bash
+    env:
+      TAG: ${{ github.event_name == 'release' && github.event.release.tag_name || inputs.tag }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: main
+          fetch-depth: 0
+      - name: Render the badges from the tag
+        run: |
+          set -euo pipefail
+          test -n "$TAG"
+          if [ "${{ vars.CHANNEL_WINGET_LIVE }}" = "true" ]; then
+            python3 scripts/cd/render_badges.py --tag "$TAG" --winget-live
+          else
+            python3 scripts/cd/render_badges.py --tag "$TAG"
+          fi
+      - name: Bump the README cache-buster
+        run: |
+          set -euo pipefail
+          version="${TAG#v}"
+          version="${version%%_*}"
+          sed -i -E "s#(assets/badges/[a-z-]+\.svg\?v=)[0-9]+\.[0-9]+\.[0-9]+#\1${version}#g" README.md README.en.md
+      - name: Commit and push the badge updates
+        run: |
+          set -euo pipefail
+          git add assets/badges README.md README.en.md
+          if git diff --cached --quiet; then
+            echo "no changes"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "chore(badges): render $TAG"
+          git pull --rebase origin main
+          git push origin HEAD:main
