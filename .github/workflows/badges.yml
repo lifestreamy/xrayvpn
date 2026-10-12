@@ -5,6 +5,7 @@
 # answer keeps its current badge. The winget badge flips to the version only
 # when the repository variable CHANNEL_WINGET_LIVE is true (same gate as
 # verify-channels).
+# Main is ruleset-protected: the bot pushes with a deploy key on the ruleset bypass list.
 # Triggers: release (published), publish-* completions (pypi/brew/apt), workflow_dispatch.
 
 name: badges
@@ -59,6 +60,8 @@ jobs:
           set -euo pipefail
           python3 scripts/cd/bump_readme_badge_queries.py --versions-json build/versions.json README.md README.en.md
       - name: Commit and push the badge updates
+        env:
+          BADGES_DEPLOY_KEY: ${{ secrets.BADGES_DEPLOY_KEY }}
         run: |
           set -euo pipefail
           git add assets/badges README.md README.en.md
@@ -70,4 +73,9 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git commit -m "chore(badges): sync with the live channels"
           git pull --rebase origin main
-          git push origin HEAD:main
+          test -n "$BADGES_DEPLOY_KEY"
+          install -d -m 700 ~/.ssh
+          install -m 600 .github/ssh/known_hosts ~/.ssh/known_hosts
+          eval "$(ssh-agent -s)"
+          printf '%s\n' "$BADGES_DEPLOY_KEY" | ssh-add -
+          git push git@github.com:lifestreamy/xrayvpn.git HEAD:main
