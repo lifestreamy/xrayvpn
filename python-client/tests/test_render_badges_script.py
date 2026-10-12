@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import importlib.util
+import json
 import re
 import sys
 from pathlib import Path
@@ -128,3 +129,91 @@ def test_main_winget_live(tmp_path: Path) -> None:
 def test_main_rejects_plain_tag(tmp_path: Path) -> None:
     with pytest.raises(SystemExit):
         badges_mod.main(["--tag", "0.4.1", "--out", str(tmp_path)])
+
+
+FULL_VERSIONS = {"release": "0.4.2", "pip": "0.4.1", "uv": "0.4.1", "brew": "0.4.1", "apt": "0.4.1"}
+
+
+def _versions_file(tmp_path: Path, versions: dict) -> Path:
+    path = tmp_path / "versions.json"
+    path.write_text(json.dumps(versions), encoding="utf-8")
+    return path
+
+
+def test_live_badges_use_per_channel_versions(tmp_path: Path) -> None:
+    out = tmp_path / "out"
+    code = badges_mod.main(
+        ["--versions-json", str(_versions_file(tmp_path, FULL_VERSIONS)), "--out", str(out)]
+    )
+    assert code == 0
+    assert "v0.4.2" in (out / "release.svg").read_text(encoding="utf-8")
+    assert "v0.4.1" in (out / "pip.svg").read_text(encoding="utf-8")
+    assert "скоро" in (out / "winget-ru.svg").read_text(encoding="utf-8")
+    assert {path.name for path in out.iterdir()} == _NAMES
+
+
+def test_live_badges_skip_unknown_channels(tmp_path: Path) -> None:
+    out = tmp_path / "out"
+    badges_mod.main(
+        ["--versions-json", str(_versions_file(tmp_path, {"release": "0.4.2"})), "--out", str(out)]
+    )
+    names = {path.name for path in out.iterdir()}
+    assert names == {
+        "release.svg",
+        "winget-ru.svg",
+        "winget-en.svg",
+        "python.svg",
+        "license.svg",
+        "lang-ru.svg",
+        "lang-ru-muted.svg",
+        "lang-en.svg",
+        "lang-en-muted.svg",
+    }
+
+
+def test_live_badges_winget_live(tmp_path: Path) -> None:
+    out = tmp_path / "out"
+    badges_mod.main(
+        [
+            "--versions-json",
+            str(_versions_file(tmp_path, FULL_VERSIONS)),
+            "--winget-live",
+            "--out",
+            str(out),
+        ]
+    )
+    winget = (out / "winget-ru.svg").read_text(encoding="utf-8")
+    assert "v0.4.2" in winget
+    assert "скоро" not in winget
+
+
+def test_live_badges_winget_live_needs_release(tmp_path: Path) -> None:
+    out = tmp_path / "out"
+    badges_mod.main(
+        [
+            "--versions-json",
+            str(_versions_file(tmp_path, {"pip": "0.4.1"})),
+            "--winget-live",
+            "--out",
+            str(out),
+        ]
+    )
+    names = {path.name for path in out.iterdir()}
+    assert "winget-ru.svg" not in names
+    assert "winget-en.svg" not in names
+    assert "pip.svg" in names
+
+
+def test_live_badges_invalid_version_skipped(tmp_path: Path) -> None:
+    out = tmp_path / "out"
+    badges_mod.main(
+        ["--versions-json", str(_versions_file(tmp_path, {"pip": "0.4"})), "--out", str(out)]
+    )
+    assert not (out / "pip.svg").exists()
+
+
+def test_main_requires_one_source(tmp_path: Path) -> None:
+    with pytest.raises(SystemExit):
+        badges_mod.main(["--out", str(tmp_path)])
+    with pytest.raises(SystemExit):
+        badges_mod.main(["--tag", "v0.4.1", "--versions-json", "x", "--out", str(tmp_path)])

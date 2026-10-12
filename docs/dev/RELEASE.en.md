@@ -44,6 +44,14 @@ Homebrew (macOS, Apple Silicon):
 brew install lifestreamy/tap/xrayvpn
 ```
 
+## Badges
+- README badges update on events (pipeline `badges.yml`): a release publish and successful
+  channel publishes (pypi, brew, apt). The versions come from the channels themselves (they may
+  differ), `?v=` moves on the badge that changed, and the bot commit lands on main.
+- The winget badge shows the version only when `CHANNEL_WINGET_LIVE=true` (a repository variable),
+  otherwise — «скоро»/«soon»; run the pipeline manually after the flip.
+- Repair — a manual run without inputs (Actions tab).
+
 ## CHANGELOG
 - Kept per shipped version; entries are added by the release commit; format — Added / Changed /
   Fixed / Removed.

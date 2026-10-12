@@ -1,9 +1,10 @@
-"""Render the README badge set into assets/badges from the release tag and channel states.
+"""Render the README badge set into assets/badges from a released tag or live channel versions.
 
-Consumed by the docs finalize wave and by channel-state changes: reads the templates
-under packaging/badges and the palette from assets/color-tokens.json, then writes
-self-contained SVG badges with their own background and border, readable on both
-GitHub themes.
+Consumed by the badges pipeline: takes the versions either from one released tag
+(--tag) or per channel from collect_channel_versions.py (--versions-json), reads the
+templates under packaging/badges and the palette from assets/color-tokens.json, then
+writes self-contained SVG badges with their own background and border, readable on
+both GitHub themes. A channel without a known version keeps its current badge.
 """
 
 from __future__ import annotations
@@ -11,6 +12,7 @@ from __future__ import annotations
 import argparse
 import json
 import math
+import re
 import sys
 from pathlib import Path
 
@@ -21,6 +23,8 @@ PAD = 8.0
 RADIUS = 4
 INK = "#0B1F16"
 INK_NEUTRAL = "#161B22"
+LIVE_KEYS = ("release", "pip", "uv", "brew", "apt")
+VERSION_RE = re.compile(r"^\d+\.\d+\.\d+$")
 
 # Advance widths of Arial-compatible 12px text, measured in Chromium on 2026-09-26.
 WIDTHS_400 = {
@@ -134,6 +138,45 @@ def channel_badges(version: str, winget_live: bool) -> list[tuple[str, str, str,
     ]
 
 
+def load_versions(path: Path) -> dict[str, str | None]:
+    raw = json.loads(path.read_text(encoding="utf-8"))
+    if not isinstance(raw, dict):
+        raise SystemExit(f"versions JSON must be an object: {path}")
+    versions: dict[str, str | None] = {}
+    for key in LIVE_KEYS:
+        value = raw.get(key)
+        versions[key] = value if isinstance(value, str) and VERSION_RE.match(value) else None
+    return versions
+
+
+def channel_badges_live(
+    versions: dict[str, str | None], winget_live: bool
+) -> list[tuple[str, str, str, str, str]]:
+    rows: list[tuple[str, str, str, str, str]] = []
+    for name, label, key in (
+        ("release.svg", "release", "release"),
+        ("brew.svg", "brew", "brew"),
+        ("apt.svg", "apt", "apt"),
+        ("pip.svg", "pip", "pip"),
+        ("uv.svg", "uv tool", "uv"),
+    ):
+        version = versions.get(key)
+        if version:
+            tag = f"v{version}"
+            rows.append((name, label, tag, "accent", f"{label} {tag}"))
+    release = versions.get("release")
+    if not winget_live:
+        rows.append(("winget-ru.svg", "winget", "скоро", "warn", "winget скоро"))
+        rows.append(("winget-en.svg", "winget", "soon", "warn", "winget soon"))
+    elif release:
+        tag = f"v{release}"
+        rows.append(("winget-ru.svg", "winget", tag, "accent", f"winget {tag}"))
+        rows.append(("winget-en.svg", "winget", tag, "accent", f"winget {tag}"))
+    rows.append(("python.svg", "python", "3.12+", "muted", "python 3.12+"))
+    rows.append(("license.svg", "license", "AGPL-3.0", "muted", "license AGPL-3.0"))
+    return rows
+
+
 def language_badges() -> list[tuple[str, str, str]]:
     return [
         ("lang-ru.svg", "Русский", "accent"),
@@ -143,7 +186,9 @@ def language_badges() -> list[tuple[str, str, str]]:
     ]
 
 
-def badge_files(root: Path, version: str, winget_live: bool) -> dict[Path, bytes]:
+def _render_rows(
+    root: Path, rows: list[tuple[str, str, str, str, str]]
+) -> dict[Path, bytes]:
     templates = root / "packaging" / "badges"
     palette = load_palette(root)
     gradients = {
@@ -153,7 +198,7 @@ def badge_files(root: Path, version: str, winget_live: bool) -> dict[Path, bytes
     two_segment = read_template(templates / "badge.svg")
     single_segment = read_template(templates / "badge-lang.svg")
     files: dict[Path, bytes] = {}
-    for name, label, value, tone, alt in channel_badges(version, winget_live):
+    for name, label, value, tone, alt in rows:
         rendered = render_two_segment(
             two_segment, label, value, gradients[tone], inks[tone], alt
         )
@@ -166,9 +211,25 @@ def badge_files(root: Path, version: str, winget_live: bool) -> dict[Path, bytes
     return files
 
 
+def badge_files(root: Path, version: str, winget_live: bool) -> dict[Path, bytes]:
+    return _render_rows(root, channel_badges(version, winget_live))
+
+
+def badge_files_live(
+    root: Path, versions: dict[str, str | None], winget_live: bool
+) -> dict[Path, bytes]:
+    return _render_rows(root, channel_badges_live(versions, winget_live))
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--tag", required=True, help="released tag, e.g. v0.4.1")
+    source = parser.add_mutually_exclusive_group(required=True)
+    source.add_argument("--tag", help="released tag, e.g. v0.4.1 (renders every channel from it)")
+    source.add_argument(
+        "--versions-json",
+        type=Path,
+        help="per-channel versions from the live channels (see collect_channel_versions.py)",
+    )
     parser.add_argument(
         "--winget-live",
         action="store_true",
@@ -177,9 +238,11 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--out", type=Path, help="output directory (default assets/badges)")
     parser.add_argument("--root", type=Path, default=Path(__file__).resolve().parents[2])
     args = parser.parse_args(argv)
-    version = normalized_version(args.tag)
+    if args.versions_json:
+        files = badge_files_live(args.root, load_versions(args.versions_json), args.winget_live)
+    else:
+        files = badge_files(args.root, normalized_version(args.tag), args.winget_live)
     out = args.out or args.root / "assets" / "badges"
-    files = badge_files(args.root, version, args.winget_live)
     for relative, data in sorted(files.items()):
         target = out / relative
         target.parent.mkdir(parents=True, exist_ok=True)

@@ -1,0 +1,73 @@
+---
+# README badges: renders the SVG set from the live channel versions (latest
+# release, PyPI, tap formula, apt index) and commits the result to main as the
+# bot; each badge carries its own ?v= cache-buster and a channel that cannot
+# answer keeps its current badge. The winget badge flips to the version only
+# when the repository variable CHANNEL_WINGET_LIVE is true (same gate as
+# verify-channels).
+# Triggers: release (published), publish-* completions (pypi/brew/apt), workflow_dispatch.
+
+name: badges
+
+on:
+  release:
+    types: [published]
+  workflow_run:
+    workflows: [publish-pypi, publish-brew, publish-apt]
+    types: [completed]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: badges
+  cancel-in-progress: false
+
+jobs:
+  render:
+    if: |
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'release' && github.event.release.prerelease == false) ||
+      (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: main
+          fetch-depth: 0
+      - name: Collect the live channel versions
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          python3 scripts/cd/collect_channel_versions.py --out build/versions.json
+      - name: Render the badges from the collected versions
+        run: |
+          set -euo pipefail
+          if [ "${{ vars.CHANNEL_WINGET_LIVE }}" = "true" ]; then
+            python3 scripts/cd/render_badges.py --versions-json build/versions.json --winget-live
+          else
+            python3 scripts/cd/render_badges.py --versions-json build/versions.json
+          fi
+      - name: Bump the README cache-busters
+        run: |
+          set -euo pipefail
+          python3 scripts/cd/bump_readme_badge_queries.py --versions-json build/versions.json README.md README.en.md
+      - name: Commit and push the badge updates
+        run: |
+          set -euo pipefail
+          git add assets/badges README.md README.en.md
+          if git diff --cached --quiet; then
+            echo "no changes"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "chore(badges): sync with the live channels"
+          git pull --rebase origin main
+          git push origin HEAD:main
