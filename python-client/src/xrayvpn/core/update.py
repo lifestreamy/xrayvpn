@@ -10,12 +10,16 @@ network access is injectable.
 
 from __future__ import annotations
 
+import hashlib
 import json
+import os
+import subprocess
 import urllib.error
 import urllib.request
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
-from typing import Any
+from pathlib import Path
+from typing import IO, Any
 
 from xrayvpn.core import update_check
 
@@ -28,6 +32,12 @@ NETWORK_TIMEOUT_SECONDS = 10.0
 LIST_LIMIT_DEFAULT = 10
 LIST_LIMIT_MAX = 20
 SHA256_HEX_LENGTH = 64
+DOWNLOAD_MAX_BYTES = 512 * 1024 * 1024
+DOWNLOAD_CHUNK_BYTES = 256 * 1024
+STAGING_SUFFIX = ".new"
+BACKUP_SUFFIX = ".old"
+STATUS_UPDATED = "updated"
+STATUS_UP_TO_DATE = "up-to-date"
 
 PLATFORM_TOKENS = {
     ("win32", "x86_64"): "windows-x64",
@@ -230,3 +240,166 @@ def _read_json(http: Callable[[str], bytes], url: str) -> Any:
         return json.loads(raw)
     except ValueError as exc:
         raise UpdateError(f"malformed JSON from {url}") from exc
+
+
+def open_url_stream(url: str) -> IO[bytes]:
+    request = urllib.request.Request(url, headers={"User-Agent": "xrayvpn-update"})
+    try:
+        return urllib.request.urlopen(request, timeout=NETWORK_TIMEOUT_SECONDS)
+    except (urllib.error.URLError, OSError, ValueError) as exc:
+        raise UpdateError(f"network error for {url}: {exc}") from exc
+
+
+def cross_check_sums(name: str, sha256: str, sums: Mapping[str, str]) -> None:
+    expected = sums.get(name)
+    if expected is None:
+        raise UpdateError(f"{name} is not listed in {SUMS_NAME}")
+    if expected != sha256:
+        raise UpdateError(f"checksum mismatch for {name}: {SUMS_NAME} has {expected}")
+
+
+def download_asset(
+    url: str,
+    dest: Path,
+    *,
+    expected_sha256: str,
+    opener: Callable[[str], IO[bytes]] | None = None,
+    max_bytes: int = DOWNLOAD_MAX_BYTES,
+    chunk_size: int = DOWNLOAD_CHUNK_BYTES,
+) -> str:
+    open_stream = opener or open_url_stream
+    digest = hashlib.sha256()
+    written = 0
+    try:
+        with open_stream(url) as source, dest.open("wb") as sink:
+            while True:
+                chunk = source.read(chunk_size)
+                if not chunk:
+                    break
+                written += len(chunk)
+                if written > max_bytes:
+                    raise UpdateError(f"download exceeds {max_bytes} bytes")
+                digest.update(chunk)
+                sink.write(chunk)
+    except UpdateError:
+        dest.unlink(missing_ok=True)
+        raise
+    except OSError as exc:
+        dest.unlink(missing_ok=True)
+        raise UpdateError(f"download failed for {url}: {exc}") from exc
+    actual = digest.hexdigest()
+    if actual != expected_sha256:
+        dest.unlink(missing_ok=True)
+        raise UpdateError(f"checksum mismatch for {url}: got {actual}")
+    return actual
+
+
+def backup_path(target: Path) -> Path:
+    return target.with_name(target.name + BACKUP_SUFFIX)
+
+
+def cleanup_backup(target: Path) -> bool:
+    try:
+        backup_path(target).unlink()
+    except FileNotFoundError:
+        return True
+    except OSError:
+        return False
+    return True
+
+
+def swap_in_place(staged: Path, target: Path) -> Path:
+    """Rename-then-replace; a running image can be renamed on Windows."""
+    backup = backup_path(target)
+    cleanup_backup(target)
+    try:
+        os.replace(target, backup)
+    except OSError as exc:
+        raise UpdateError(
+            f"cannot move {target} aside (another instance may be running): {exc}"
+        ) from exc
+    try:
+        os.replace(staged, target)
+    except OSError as exc:
+        try:
+            os.replace(backup, target)
+        except OSError:
+            pass
+        raise UpdateError(f"cannot install the new binary: {exc}") from exc
+    return backup
+
+
+def relaunch(target: Path, *, spawner: Callable[[list[str]], Any] | None = None) -> None:
+    spawn = spawner or subprocess.Popen
+    try:
+        spawn([str(target)])
+    except OSError as exc:
+        raise UpdateError(f"cannot restart {target}: {exc}") from exc
+
+
+@dataclass(frozen=True)
+class UpdateOutcome:
+    status: str
+    version: str
+    target: Path
+    backup: Path | None = None
+
+
+def perform_standalone_update(
+    target: Path,
+    *,
+    current: str,
+    platform: str,
+    machine: str,
+    requested_version: str | None = None,
+    http: Callable[[str], bytes] | None = None,
+    opener: Callable[[str], IO[bytes]] | None = None,
+) -> UpdateOutcome:
+    if not target.is_file():
+        raise UpdateError(f"target binary not found: {target}")
+    parent = target.parent
+    if not os.access(parent, os.W_OK):
+        raise UpdateError(
+            f"no write access to {parent}: the install directory must be user-writable"
+        )
+
+    release = _resolve_release(requested_version, http=http)
+    if requested_version is None and not update_check.is_newer(release.tag, current):
+        return UpdateOutcome(STATUS_UP_TO_DATE, release.version, target)
+
+    assets = fetch_latest_json(release.tag, http=http)
+    asset = select_asset(assets, platform=platform, machine=machine)
+    if asset is None:
+        raise UpdateError(f"release {release.tag} has no build for {platform}/{machine}")
+    sums = fetch_sums(release.tag, http=http)
+    cross_check_sums(asset.name, asset.sha256, sums)
+
+    staged = target.with_name(target.name + STAGING_SUFFIX)
+    staged.unlink(missing_ok=True)
+    download_asset(asset.url, staged, expected_sha256=asset.sha256, opener=opener)
+    try:
+        staged.chmod(0o755)
+        backup = swap_in_place(staged, target)
+    except Exception:
+        staged.unlink(missing_ok=True)
+        raise
+    return UpdateOutcome(STATUS_UPDATED, release.version, target, backup)
+
+
+def _resolve_release(
+    requested_version: str | None,
+    *,
+    http: Callable[[str], bytes] | None = None,
+) -> Release:
+    if requested_version:
+        plain = requested_version.strip()
+        wanted_tags = {plain, f"v{plain.lstrip('vV')}"}
+        wanted_versions = {normalize_tag(plain)}
+        for release in fetch_releases(http=http):
+            if release.tag in wanted_tags or release.version in wanted_versions:
+                return release
+        raise UpdateError(f"release {requested_version} not found")
+    release = fetch_latest_release(http=http)
+    if release is None:
+        raise UpdateError("no stable release found")
+    return release
