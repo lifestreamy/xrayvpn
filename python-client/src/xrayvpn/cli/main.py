@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import getpass
 import os
+import platform
 import sys
 import traceback
 from pathlib import Path
@@ -26,9 +27,9 @@ from typing import Annotated
 
 import typer
 
-from xrayvpn import display_version, i18n
+from xrayvpn import __version__, display_version, i18n
 from xrayvpn.cli import l10n_typer, prompts, repl, service, theme
-from xrayvpn.core import runtime_paths, update_check, wsl
+from xrayvpn.core import install_source, runtime_paths, update, update_check, update_state, wsl
 from xrayvpn.core.config import find_repo_root, load_settings, merge_overrides
 from xrayvpn.core.conn import apply_ssh_config, ssh_config_entry
 from xrayvpn.core.deploy_lock import DeployBusy, deploy_lock
@@ -154,6 +155,201 @@ def repl_command() -> None:
 
 
 app.add_typer(service.service_app, name="service")
+
+update_app = typer.Typer(
+    name="update",
+    help=i18n.t("EXEC_UPDATE_HELP"),
+    invoke_without_command=True,
+    no_args_is_help=False,
+    add_completion=False,
+)
+
+
+@update_app.callback()
+def update_command(
+    ctx: typer.Context,
+    check: Annotated[
+        bool, typer.Option("--check", help=i18n.t("EXEC_UPDATE_OPT_CHECK"))
+    ] = False,
+    yes: Annotated[bool, typer.Option("--yes", help=i18n.t("EXEC_UPDATE_OPT_YES"))] = False,
+    dry_run: Annotated[
+        bool, typer.Option("--dry-run", help=i18n.t("EXEC_UPDATE_OPT_DRYRUN"))
+    ] = False,
+    version: Annotated[
+        str | None, typer.Option("--version", help=i18n.t("EXEC_UPDATE_OPT_VERSION"))
+    ] = None,
+    skip: Annotated[bool, typer.Option("--skip", help=i18n.t("EXEC_UPDATE_OPT_SKIP"))] = False,
+    unskip: Annotated[
+        bool, typer.Option("--unskip", help=i18n.t("EXEC_UPDATE_OPT_UNSKIP"))
+    ] = False,
+) -> None:
+    """Check for and install a new xrayvpn version."""
+    if ctx.invoked_subcommand is not None:
+        return
+    raise typer.Exit(
+        _update_flow(check=check, yes=yes, dry_run=dry_run, version=version, skip=skip, unskip=unskip)
+    )
+
+
+@update_app.command("list")
+def update_list(
+    limit: Annotated[
+        int,
+        typer.Option("--limit", help=i18n.t("EXEC_UPDATE_OPT_LIMIT", max=update.LIST_LIMIT_MAX)),
+    ] = update.LIST_LIMIT_DEFAULT,
+    pre: Annotated[bool, typer.Option("--pre", help=i18n.t("EXEC_UPDATE_OPT_PRE"))] = False,
+) -> None:
+    """List recent releases (stable by default)."""
+    try:
+        releases = update.list_versions(limit=limit, include_prerelease=pre)
+    except update.UpdateError as exc:
+        typer.echo(theme.err(i18n.t("COMMON_ERR", err=exc)), err=True)
+        raise typer.Exit(1)
+    if pre:
+        typer.echo(i18n.t("EXEC_UPDATE_LIST_PRE"))
+    else:
+        typer.echo(i18n.t("EXEC_UPDATE_LIST_STABLE"))
+    for release in releases:
+        typer.echo(f"  {release.tag:16} {release.published_at[:10]}  {release.html_url}")
+    raise typer.Exit(0)
+
+
+def _kind_label(kind: str) -> str:
+    labels = {
+        install_source.STANDALONE: i18n.t("EXEC_UPDATE_KIND_STANDALONE"),
+        install_source.DEV: i18n.t("EXEC_UPDATE_KIND_DEV"),
+        install_source.UV_TOOL: i18n.t("EXEC_UPDATE_KIND_UV_TOOL"),
+        install_source.PIPX: i18n.t("EXEC_UPDATE_KIND_PIPX"),
+        install_source.PIP: i18n.t("EXEC_UPDATE_KIND_PIP"),
+        install_source.PIP_DIRECT: i18n.t("EXEC_UPDATE_KIND_PIP_DIRECT"),
+        install_source.BREW: i18n.t("EXEC_UPDATE_KIND_BREW"),
+        install_source.APT: i18n.t("EXEC_UPDATE_KIND_APT"),
+        install_source.PACMAN: i18n.t("EXEC_UPDATE_KIND_PACMAN"),
+        install_source.WINGET: i18n.t("EXEC_UPDATE_KIND_WINGET"),
+    }
+    return labels.get(kind, i18n.t("EXEC_UPDATE_KIND_UNKNOWN"))
+
+
+def _manager_rendered(plan: update.ManagerPlan) -> str:
+    return " && ".join(" ".join(command) for command in plan.commands)
+
+
+def _update_check_flow() -> int:
+    release = update.resolve_release(None)
+    if not update_check.is_newer(release.tag, __version__):
+        typer.echo(i18n.t("EXEC_UPDATE_CURRENT", tag=release.tag))
+        return 0
+    typer.echo(i18n.t("EXEC_UPDATE_CHECK_OUT", tag=release.tag, current=__version__))
+    return 10
+
+
+def _standalone_update_flow(target: Path, *, yes: bool, version: str | None) -> int:
+    if not yes:
+        if not prompts.is_interactive():
+            typer.echo(i18n.t("EXEC_UPDATE_NON_TTY"), err=True)
+            return 2
+        if not prompts.confirm(i18n.t("EXEC_UPDATE_CONFIRM"), default=True):
+            return 0
+    outcome = update.perform_standalone_update(
+        target,
+        current=__version__,
+        platform=sys.platform,
+        machine=platform.machine(),
+        requested_version=version,
+    )
+    if outcome.status == update.STATUS_UP_TO_DATE:
+        typer.echo(i18n.t("EXEC_UPDATE_CURRENT", tag=outcome.version))
+        return 0
+    typer.echo(i18n.t("EXEC_UPDATE_DONE", tag=outcome.version, backup=outcome.backup))
+    if repl.session_active() or not prompts.is_interactive():
+        typer.echo(i18n.t("EXEC_UPDATE_RESTART_MANUAL"))
+        return 0
+    if prompts.confirm(i18n.t("EXEC_UPDATE_RESTART_PROMPT"), default=True):
+        update.relaunch(target)
+    else:
+        typer.echo(i18n.t("EXEC_UPDATE_RESTART_MANUAL"))
+    return 0
+
+
+def _manager_flow(kind: str, plan: update.ManagerPlan, *, yes: bool, version: str | None) -> int:
+    rendered = _manager_rendered(plan)
+    typer.echo(i18n.t("EXEC_UPDATE_MANAGED", manager=_kind_label(kind)))
+    typer.echo(i18n.t("EXEC_UPDATE_MANAGED_RUN", commands=rendered))
+    if version is not None:
+        hint = update.pin_hint(kind, version)
+        if hint is not None:
+            typer.echo(i18n.t("EXEC_UPDATE_PIN", command=hint))
+        return 2
+    if not plan.executable:
+        return 2
+    if not yes:
+        if not prompts.is_interactive():
+            typer.echo(i18n.t("EXEC_UPDATE_NON_TTY"), err=True)
+            return 2
+        typer.echo(i18n.t("EXEC_UPDATE_MANAGER_AUTO", command=rendered))
+        if not prompts.confirm(i18n.t("EXEC_UPDATE_CONFIRM"), default=True):
+            return 2
+    for command in plan.commands:
+        rc = update.run_manager_command(kind, command)
+        if rc != 0:
+            typer.echo(theme.err(i18n.t("EXEC_UPDATE_MANAGER_FAIL", rc=rc)), err=True)
+            return 1
+    typer.echo(i18n.t("EXEC_UPDATE_MANAGER_DONE", rc=0))
+    return 0
+
+
+def _update_flow(
+    *,
+    check: bool,
+    yes: bool,
+    dry_run: bool,
+    version: str | None,
+    skip: bool,
+    unskip: bool,
+) -> int:
+    state = update_state.default_state_path()
+    if skip and unskip:
+        typer.echo(theme.err(i18n.t("EXEC_UPDATE_SKIP_CONFLICT")), err=True)
+        return 2
+    try:
+        if unskip:
+            update_state.clear_skip(state)
+            typer.echo(i18n.t("EXEC_UPDATE_SKIP_CLEARED"))
+            return 0
+        if skip:
+            release = update.resolve_release(None)
+            if not update_state.skip_version(state, release.version):
+                typer.echo(theme.err(i18n.t("COMMON_ERR", err=f"cannot write {state}")), err=True)
+                return 1
+            typer.echo(i18n.t("EXEC_UPDATE_SKIP_SET", tag=release.tag))
+            return 0
+        info = install_source.detect()
+        typer.echo(i18n.t("EXEC_UPDATE_DETECTED", kind=_kind_label(info.kind)))
+        if check:
+            return _update_check_flow()
+        target = Path(os.path.abspath(sys.argv[0]))
+        if dry_run:
+            release = update.resolve_release(version)
+            typer.echo(i18n.t("EXEC_UPDATE_DRYRUN", tag=release.tag, target=target))
+            return 0
+        if info.kind == install_source.STANDALONE:
+            return _standalone_update_flow(target, yes=yes, version=version)
+        if info.kind == install_source.DEV:
+            typer.echo(i18n.t("EXEC_UPDATE_DEV"))
+            return 2
+        plan = update.manager_plan(info.kind)
+        if plan is None:
+            typer.echo(
+                i18n.t("EXEC_UPDATE_UNKNOWN", page=update_check.LATEST_RELEASE_PAGE)
+            )
+            return 2
+        return _manager_flow(info.kind, plan, yes=yes, version=version)
+    except update.UpdateError as exc:
+        typer.echo(theme.err(i18n.t("COMMON_ERR", err=exc)), err=True)
+        return 1
+
+
+app.add_typer(update_app, name="update")
 
 
 def _repl_dispatch(tokens: list[str]) -> int:

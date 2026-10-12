@@ -22,6 +22,7 @@ from pathlib import Path
 from typing import IO, Any
 
 from xrayvpn.core import install_source, update_check
+from xrayvpn.core.update_state import normalize_tag
 
 STANDALONE = install_source.STANDALONE
 DEV = install_source.DEV
@@ -93,10 +94,6 @@ def http_get(url: str, *, timeout: float = NETWORK_TIMEOUT_SECONDS) -> bytes:
             return bytes(response.read())
     except (urllib.error.URLError, OSError, ValueError) as exc:
         raise UpdateError(f"network error for {url}: {exc}") from exc
-
-
-def normalize_tag(tag: str) -> str:
-    return tag.strip().lstrip("vV").split("_")[0].split("+")[0].split("-")[0]
 
 
 def parse_release(payload: Mapping[str, Any]) -> Release | None:
@@ -375,7 +372,7 @@ def perform_standalone_update(
             f"no write access to {parent}: the install directory must be user-writable"
         )
 
-    release = _resolve_release(requested_version, http=http)
+    release = resolve_release(requested_version, http=http)
     if requested_version is None and not update_check.is_newer(release.tag, current):
         return UpdateOutcome(STATUS_UP_TO_DATE, release.version, target)
 
@@ -398,7 +395,7 @@ def perform_standalone_update(
     return UpdateOutcome(STATUS_UPDATED, release.version, target, backup)
 
 
-def _resolve_release(
+def resolve_release(
     requested_version: str | None,
     *,
     http: Callable[[str], bytes] | None = None,

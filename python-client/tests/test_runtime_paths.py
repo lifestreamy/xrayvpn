@@ -478,3 +478,22 @@ def test_run_without_net_in_dev_mode(monkeypatch: pytest.MonkeyPatch) -> None:
     )
     with pytest.raises(ValueError, match="kaboom"):
         main_mod.run()
+
+
+# --- state workspace: per-user state lives under .../xrayvpn --------------
+
+
+def test_state_workspace_per_platform(tmp_path: Path) -> None:
+    home = tmp_path / "home"
+    assert runtime_paths.state_workspace(
+        env={"LOCALAPPDATA": str(tmp_path / "loc")}, home=home, platform="win32"
+    ) == tmp_path / "loc" / "xrayvpn"
+    assert runtime_paths.state_workspace(env={}, home=home, platform="darwin") == (
+        home / "Library" / "Application Support" / "xrayvpn"
+    )
+    assert runtime_paths.state_workspace(env={}, home=home, platform="linux") == (
+        home / ".local" / "share" / "xrayvpn"
+    )
+    assert runtime_paths.state_workspace(
+        env={"XDG_DATA_HOME": str(tmp_path / "xdg")}, home=home, platform="linux"
+    ) == tmp_path / "xdg" / "xrayvpn"
