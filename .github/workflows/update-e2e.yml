@@ -1,7 +1,7 @@
 ---
 # Real-GitHub update e2e: resolves the latest stable release, verifies
 # latest.json + SHA256SUMS, downloads (cached per tag) and runs the fresh
-# binary with --version. Triggers: workflow_dispatch, after release-binaries.
+# binary with --version. Triggers: workflow_dispatch and tag-push release runs.
 # Not a PR gate; executions never block pull requests.
 
 name: update-e2e
@@ -27,7 +27,8 @@ jobs:
     name: update e2e (${{ matrix.os }})
     if: >-
       github.event_name == 'workflow_dispatch'
-      || github.event.workflow_run.conclusion == 'success'
+      || (github.event.workflow_run.conclusion == 'success'
+      && github.event.workflow_run.event == 'push')
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false

@@ -83,6 +83,62 @@ def test_update_standalone_yes_runs_swap(
     assert calls["target"] == fake_exe
 
 
+def test_update_pin_old_version_warns(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, state_file: Path
+) -> None:
+    monkeypatch.setattr(install_source, "detect", lambda: _info(install_source.STANDALONE))
+
+    def fake_perform(
+        target: Path,
+        *,
+        current: str,
+        platform: str,
+        machine: str,
+        requested_version: str | None = None,
+        http: object = None,
+        opener: object = None,
+    ) -> update.UpdateOutcome:
+        return update.UpdateOutcome(
+            update.STATUS_UPDATED, "0.4.2", Path(target), Path(str(target) + ".old")
+        )
+
+    monkeypatch.setattr(update, "perform_standalone_update", fake_perform)
+    fake_exe = tmp_path / "xrayvpn.exe"
+    fake_exe.write_bytes(b"x")
+    monkeypatch.setattr(main_mod.sys, "argv", [str(fake_exe)])
+    result = runner.invoke(main_mod.app, ["update", "--version", "0.4.2", "--yes"])
+    assert result.exit_code == 0
+    assert "has no `xrayvpn update`" in result.output
+
+
+def test_update_pin_current_version_no_warn(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, state_file: Path
+) -> None:
+    monkeypatch.setattr(install_source, "detect", lambda: _info(install_source.STANDALONE))
+
+    def fake_perform(
+        target: Path,
+        *,
+        current: str,
+        platform: str,
+        machine: str,
+        requested_version: str | None = None,
+        http: object = None,
+        opener: object = None,
+    ) -> update.UpdateOutcome:
+        return update.UpdateOutcome(
+            update.STATUS_UPDATED, "0.4.3", Path(target), Path(str(target) + ".old")
+        )
+
+    monkeypatch.setattr(update, "perform_standalone_update", fake_perform)
+    fake_exe = tmp_path / "xrayvpn.exe"
+    fake_exe.write_bytes(b"x")
+    monkeypatch.setattr(main_mod.sys, "argv", [str(fake_exe)])
+    result = runner.invoke(main_mod.app, ["update", "--version", "0.4.3", "--yes"])
+    assert result.exit_code == 0
+    assert "has no `xrayvpn update`" not in result.output
+
+
 def test_update_standalone_non_tty_requires_yes(
     monkeypatch: pytest.MonkeyPatch, state_file: Path
 ) -> None:

@@ -5,7 +5,9 @@ on:
     paths:
       - ".github/workflows/verify-channels.yml"
       - "packaging/**"
-      - "scripts/cd/**"
+      - "scripts/cd/make_release_manifest.py"
+      - "scripts/cd/release_common.py"
+      - "scripts/cd/render_channels.py"
   schedule:
     - cron: "23 6 * * 1"
   workflow_dispatch:

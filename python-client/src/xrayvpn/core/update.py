@@ -42,6 +42,7 @@ RELEASE_DOWNLOAD_BASE = f"https://github.com/{update_check.RELEASE_OWNER_REPO}/r
 LATEST_JSON_NAME = "latest.json"
 SUMS_NAME = "SHA256SUMS.txt"
 NETWORK_TIMEOUT_SECONDS = 10.0
+UPDATE_FEATURE_VERSION = "0.4.3"
 LIST_LIMIT_DEFAULT = 10
 LIST_LIMIT_MAX = 20
 SHA256_HEX_LENGTH = 64
@@ -75,6 +76,7 @@ class Release:
     prerelease: bool
     published_at: str
     html_url: str
+    has_build: bool = False
 
 
 @dataclass(frozen=True)
@@ -108,6 +110,16 @@ def parse_release(payload: Mapping[str, Any]) -> Release | None:
         prerelease=bool(payload.get("prerelease")),
         published_at=str(payload.get("published_at") or ""),
         html_url=str(payload.get("html_url") or ""),
+        has_build=_has_portable_asset(payload.get("assets")),
+    )
+
+
+def _has_portable_asset(raw_assets: Any) -> bool:
+    if not isinstance(raw_assets, list):
+        return False
+    return any(
+        isinstance(asset, Mapping) and "-portable" in str(asset.get("name") or "")
+        for asset in raw_assets
     )
 
 
@@ -205,7 +217,11 @@ def list_versions(
 ) -> list[Release]:
     bound = max(1, min(int(limit), LIST_LIMIT_MAX))
     releases = fetch_releases(http=http)
-    visible = [release for release in releases if include_prerelease or not release.prerelease]
+    visible = [
+        release
+        for release in releases
+        if (include_prerelease or not release.prerelease) and release.has_build
+    ]
     return visible[:bound]
 
 
@@ -406,6 +422,8 @@ def resolve_release(
         wanted_versions = {normalize_tag(plain)}
         for release in fetch_releases(http=http):
             if release.tag in wanted_tags or release.version in wanted_versions:
+                if not release.has_build:
+                    raise UpdateError(f"release {release.tag} has no portable builds")
                 return release
         raise UpdateError(f"release {requested_version} not found")
     release = fetch_latest_release(http=http)

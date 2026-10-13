@@ -76,9 +76,11 @@ MESSAGES: Final[dict[str, Entry]] = {
     ),
     "EXEC_UPDATE_HELP": Entry(
         "Check for and install a new xrayvpn version. Standalone binaries "
-        "update in place; package-managed copies get the right manager command.",
+        "update in place; package-managed copies get the right manager command. "
+        "`--version X` installs a specific version; `update list` shows recent stable releases.",
         "Проверить и установить новую версию xrayvpn. Standalone-бинарники "
-        "обновляются на месте; менеджерным установкам выводится команда менеджера.",
+        "обновляются на месте; менеджерным установкам выводится команда менеджера. "
+        "`--version X` ставит конкретную версию; `update list` показывает последние стабильные релизы.",
     ),
     "EXEC_UPDATE_OPT_CHECK": Entry(
         "only check; exit code 10 when an update is available",
@@ -92,8 +94,10 @@ MESSAGES: Final[dict[str, Entry]] = {
         "показать план без скачивания и изменений",
     ),
     "EXEC_UPDATE_OPT_VERSION": Entry(
-        "specific version: standalone installs it, managers show the pinning command",
-        "конкретная версия: standalone установит её, менеджеры получат команду пиннинга",
+        "specific version: standalone installs it, managers show the pinning command; "
+        "builds before 0.4.3 have no update command",
+        "конкретная версия: standalone установит её, менеджеры получат команду пиннинга; "
+        "в сборках до 0.4.3 команды update нет",
     ),
     "EXEC_UPDATE_OPT_PRE": Entry(
         "include pre-releases in the list", "включать пре-релизы в список"
@@ -108,6 +112,16 @@ MESSAGES: Final[dict[str, Entry]] = {
     "EXEC_UPDATE_OPT_LIMIT": Entry(
         "how many versions to list (max {max})",
         "сколько версий показать (максимум {max})",
+    ),
+    "EXEC_UPDATE_LIST_HELP": Entry(
+        "List recent stable releases with ready builds.",
+        "Последние стабильные релизы с готовыми сборками.",
+    ),
+    "EXEC_UPDATE_PIN_OLD": Entry(
+        "warning: {tag} has no `xrayvpn update` — after installing it, updates stop "
+        "(manual reinstall only)",
+        "внимание: в {tag} нет команды `xrayvpn update` — после установки автообновление "
+        "пропадёт (только ручная переустановка)",
     ),
     "EXEC_UPDATE_LIST_STABLE": Entry(
         "recent stable releases:", "последние стабильные релизы:"

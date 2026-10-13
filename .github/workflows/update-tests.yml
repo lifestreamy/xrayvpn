@@ -1,15 +1,10 @@
 ---
-# Update-path gates: update unit suites plus the running-binary swap smoke
-# on ubuntu/windows. Triggers: pull_request (path-filtered), workflow_dispatch.
+# Update-path gates (manual): update unit suites plus the running-binary swap
+# smoke on ubuntu/windows. PR coverage comes from python-client.yml.
 
 name: update-tests
 
 on:
-  pull_request:
-    paths:
-      - "python-client/**"
-      - "scripts/cd/update_e2e.py"
-      - ".github/workflows/update-tests.yml"
   workflow_dispatch:
 
 concurrency:

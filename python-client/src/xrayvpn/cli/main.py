@@ -183,7 +183,6 @@ def update_command(
         bool, typer.Option("--unskip", help=i18n.t("EXEC_UPDATE_OPT_UNSKIP"))
     ] = False,
 ) -> None:
-    """Check for and install a new xrayvpn version."""
     if ctx.invoked_subcommand is not None:
         return
     raise typer.Exit(
@@ -191,7 +190,7 @@ def update_command(
     )
 
 
-@update_app.command("list")
+@update_app.command("list", help=i18n.t("EXEC_UPDATE_LIST_HELP"))
 def update_list(
     limit: Annotated[
         int,
@@ -199,7 +198,6 @@ def update_list(
     ] = update.LIST_LIMIT_DEFAULT,
     pre: Annotated[bool, typer.Option("--pre", help=i18n.t("EXEC_UPDATE_OPT_PRE"))] = False,
 ) -> None:
-    """List recent releases (stable by default)."""
     try:
         releases = update.list_versions(limit=limit, include_prerelease=pre)
     except update.UpdateError as exc:
@@ -325,6 +323,12 @@ def _update_flow(
             return 0
         info = install_source.detect()
         typer.echo(i18n.t("EXEC_UPDATE_DETECTED", kind=_kind_label(info.kind)))
+        if (
+            version is not None
+            and not check
+            and update_check.is_newer(f"v{update.UPDATE_FEATURE_VERSION}", version)
+        ):
+            typer.echo(theme.warn(i18n.t("EXEC_UPDATE_PIN_OLD", tag=version)))
         if check:
             return _update_check_flow()
         target = Path(os.path.abspath(sys.argv[0]))

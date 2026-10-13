@@ -13,18 +13,24 @@ Format:
 
 ## v0.4.3 — 2026-10-13
 
+The client can now update itself; no breaking changes.
+
 ### Added
 - `xrayvpn update` command: checks for and installs updates from Releases. Standalone builds update
   in place — download, sha256 verification, the previous file stays next to it as `.old`, then a
-  restart prompt; pins and shortcuts keep working. `--check` (exit code 10 when an update is
-  available), `--yes`, `--dry-run`, `--version X` for a specific version.
-- `xrayvpn update list` — recent stable versions (`--limit`, `--pre`); help in every entry point.
+  restart prompt; pins and shortcuts keep working. Flags: `--check` (exit code 10 when an update is
+  available), `--yes` (no prompts), `--dry-run` (plan without downloads), `--version X` for a
+  specific version.
+- `xrayvpn update list` — recent stable versions (`--limit`, `--pre`); the command is available in
+  every entry point.
 
 ### Changed
 - The "update available" hint points at `xrayvpn update`; `--skip`/`--unskip` hide the notice until
   the next release.
 - On manager installs (uv tool, pipx, pip, Homebrew, apt, winget, AUR) `update` never replaces
   files: it prints the channel command and runs it for `uv tool`/`pipx` after confirmation.
+- `update list` shows only versions with ready builds; pinning a build older than 0.4.3 warns that
+  it has no `update` command.
 
 ## v0.4.2 — 2026-10-11
 
