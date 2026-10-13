@@ -11,6 +11,21 @@ Format:
 - Entries are built from commits and land in the release commit; no auto-bump.
 - The RU/EN pair is updated in the same commit; section structure is mirrored.
 
+## v0.4.3 — 2026-10-13
+
+### Added
+- `xrayvpn update` command: checks for and installs updates from Releases. Standalone builds update
+  in place — download, sha256 verification, the previous file stays next to it as `.old`, then a
+  restart prompt; pins and shortcuts keep working. `--check` (exit code 10 when an update is
+  available), `--yes`, `--dry-run`, `--version X` for a specific version.
+- `xrayvpn update list` — recent stable versions (`--limit`, `--pre`); help in every entry point.
+
+### Changed
+- The "update available" hint points at `xrayvpn update`; `--skip`/`--unskip` hide the notice until
+  the next release.
+- On manager installs (uv tool, pipx, pip, Homebrew, apt, winget, AUR) `update` never replaces
+  files: it prints the channel command and runs it for `uv tool`/`pipx` after confirmation.
+
 ## v0.4.2 — 2026-10-11
 
 ### Added
