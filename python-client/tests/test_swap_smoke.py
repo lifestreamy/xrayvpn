@@ -44,7 +44,7 @@ def _holding_binary(tmp_path: Path) -> tuple[Path, list[str]]:
         source = Path(shutil.which("sleep") or "/bin/sleep")
         target = tmp_path / "xrayvpn"
         args = ["120"]
-    shutil.copy2(source, target)
+    shutil.copy(source, target)
     return target, args
 
 
