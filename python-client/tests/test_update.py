@@ -20,14 +20,22 @@ from xrayvpn.core import update as upd
 _SHA = "b" * 64
 
 
-def _release_payload(tag: str, *, prerelease: bool = False, draft: bool = False) -> dict:
-    return {
+def _release_payload(
+    tag: str, *, prerelease: bool = False, draft: bool = False, builds: bool = True
+) -> dict:
+    payload = {
         "tag_name": tag,
         "prerelease": prerelease,
         "draft": draft,
         "published_at": "2026-01-01T00:00:00Z",
         "html_url": f"https://github.com/lifestreamy/xrayvpn/releases/tag/{tag}",
     }
+    if builds:
+        name = f"xrayvpn-{upd.normalize_tag(tag)}-linux-x64-portable"
+        payload["assets"] = [{"name": name}]
+    else:
+        payload["assets"] = []
+    return payload
 
 
 def test_normalize_tag_strips_prefix_and_suffixes() -> None:
@@ -143,6 +151,35 @@ def test_list_versions_filters_and_clamps() -> None:
     assert len(upd.list_versions(http=http, limit=999)) == upd.LIST_LIMIT_MAX
     with_pre = upd.list_versions(http=http, limit=30, include_prerelease=True)
     assert any(release.prerelease for release in with_pre)
+
+
+def test_list_versions_skips_releases_without_builds() -> None:
+    payload = [_release_payload("v0.5.1"), _release_payload("v0.2_release", builds=False)]
+
+    def http(url: str) -> bytes:
+        return json.dumps(payload).encode()
+
+    assert [release.tag for release in upd.list_versions(http=http)] == ["v0.5.1"]
+
+
+def test_parse_release_marks_builds() -> None:
+    built = upd.parse_release(_release_payload("v0.5.0"))
+    assert built is not None and built.has_build is True
+    plain = upd.parse_release(_release_payload("v0.2_release", builds=False))
+    assert plain is not None and plain.has_build is False
+    assert upd._has_portable_asset([{"name": "xrayvpn-0.4.3-windows-x64-portable.exe"}])
+    assert not upd._has_portable_asset([{"name": "notes.txt"}])
+    assert not upd._has_portable_asset(None)
+
+
+def test_resolve_release_rejects_version_without_builds() -> None:
+    payload = [_release_payload("v0.2_release", builds=False)]
+
+    def http(url: str) -> bytes:
+        return json.dumps(payload).encode()
+
+    with pytest.raises(upd.UpdateError):
+        upd.resolve_release("0.2_release", http=http)
 
 
 def test_fetch_latest_json_url_and_parse() -> None:

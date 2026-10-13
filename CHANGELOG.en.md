@@ -25,6 +25,8 @@ Format:
   the next release.
 - On manager installs (uv tool, pipx, pip, Homebrew, apt, winget, AUR) `update` never replaces
   files: it prints the channel command and runs it for `uv tool`/`pipx` after confirmation.
+- `update list` shows only versions with ready builds; pinning a build older than 0.4.3 warns that
+  it has no `update` command.
 
 ## v0.4.2 — 2026-10-11
 
