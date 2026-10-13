@@ -8,7 +8,7 @@
 # Xray Reality VPN Server — deployment
 
 [![release](assets/badges/release.svg?v=0.4.3)](https://github.com/lifestreamy/xrayvpn/releases/latest)
-[![brew](assets/badges/brew.svg?v=0.4.2)](https://github.com/lifestreamy/homebrew-tap)
+[![brew](assets/badges/brew.svg?v=0.4.3)](https://github.com/lifestreamy/homebrew-tap)
 [![winget soon](assets/badges/winget-en.svg)](https://github.com/microsoft/winget-pkgs/pull/440001)
 [![apt](assets/badges/apt.svg?v=0.4.2)](https://lifestreamy.github.io/xrayvpn/apt/)
 [![pip](assets/badges/pip.svg?v=0.4.2)](https://pypi.org/project/xrayvpn/)
