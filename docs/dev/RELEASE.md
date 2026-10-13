@@ -56,3 +56,16 @@ brew install lifestreamy/tap/xrayvpn
 ## CHANGELOG
 - Ведётся по выпущенным версиям; записи вносит релизный коммит; формат — Added / Changed / Fixed /
   Removed.
+
+## Релиз-ноты (GitHub Release)
+Тело релиза — пара RU/EN в одном тексте:
+- иконка по центру; при наличии скриншотов — таблица с `align="center"`; затем `---` и заголовок
+  `## vX.Y.Z — YYYY-MM-DD`;
+- у каждого языка: видимый жирный лид (одна строка) и сворачиваемый блок
+  `<details><summary>:us: English summary</summary>` / `<summary>:ru: Описание на русском</summary>`;
+  порядок EN → RU, между блоками — `---`;
+- внутри — короткие пункты Added / Changed / Fixed / Removed без деталей реализации; полные
+  формулировки — в `CHANGELOG.md`;
+- служебные пометки (например, про невыпущенный релиз) — `<sub>…</sub>` в конце своего блока;
+- внизу — `<sub> Pre-built by the release-binaries workflow from tag vX.Y.Z. See SHA256SUMS.txt
+  and latest.json. </sub>`.
