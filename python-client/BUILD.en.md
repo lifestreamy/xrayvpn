@@ -20,12 +20,12 @@ fallback with the identical payload contract (shared staging in `build_support.p
 .\build-binary.ps1                       # onefile, canonical
 .\build-binary.ps1 -Mode standalone      # debug mode (onedir folder)
 .\build-binary.ps1 -Engine pyinstaller   # fallback spec
-.\build-binary.ps1 -Version 0.4.2        # release version fed to metadata/--version (default: __version__)
+.\build-binary.ps1 -Version 0.4.3        # release version fed to metadata/--version (default: __version__)
 
 # Linux/macOS
 ./build-binary.sh
 ./build-binary.sh --mode standalone
-./build-binary.sh --engine pyinstaller --version 0.4.2
+./build-binary.sh --engine pyinstaller --version 0.4.3
 ```
 
 Artifacts land in `dist-binary/`. Contract: identical payload paths for both

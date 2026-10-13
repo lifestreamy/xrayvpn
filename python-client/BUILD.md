@@ -20,12 +20,12 @@ PyInstaller-спека `xrayvpn.spec` — фолбэк с тем же контр
 .\build-binary.ps1                       # onefile, канон
 .\build-binary.ps1 -Mode standalone      # отладочный режим (папка onedir)
 .\build-binary.ps1 -Engine pyinstaller   # фолбэк-спека
-.\build-binary.ps1 -Version 0.4.2        # версия в метаданные/--version (дефолт: __version__)
+.\build-binary.ps1 -Version 0.4.3        # версия в метаданные/--version (дефолт: __version__)
 
 # Linux/macOS
 ./build-binary.sh
 ./build-binary.sh --mode standalone
-./build-binary.sh --engine pyinstaller --version 0.4.2
+./build-binary.sh --engine pyinstaller --version 0.4.3
 ```
 
 Артефакты — `dist-binary/`. Контракт: одинаковые payload-пути у обоих движков,
