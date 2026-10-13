@@ -71,9 +71,120 @@ MESSAGES: Final[dict[str, Entry]] = {
     ),
     "EXEC_FETCHED": Entry("[remote] fetched {name}", "[remote] получен {name}"),
     "EXEC_UPDATE_AVAILABLE": Entry(
-        "update available: {tag} — {page}",
-        "доступно обновление: {tag} — {page}",
+        "update available: {tag} — run: {cmd}",
+        "доступно обновление: {tag} — запустите: {cmd}",
     ),
+    "EXEC_UPDATE_HELP": Entry(
+        "Check for and install a new xrayvpn version. Standalone binaries "
+        "update in place; package-managed copies get the right manager command.",
+        "Проверить и установить новую версию xrayvpn. Standalone-бинарники "
+        "обновляются на месте; менеджерным установкам выводится команда менеджера.",
+    ),
+    "EXEC_UPDATE_OPT_CHECK": Entry(
+        "only check; exit code 10 when an update is available",
+        "только проверить; код 10, если обновление доступно",
+    ),
+    "EXEC_UPDATE_OPT_YES": Entry(
+        "no prompts (for scripts)", "без подтверждений (для скриптов)"
+    ),
+    "EXEC_UPDATE_OPT_DRYRUN": Entry(
+        "show the plan without downloading or changing anything",
+        "показать план без скачивания и изменений",
+    ),
+    "EXEC_UPDATE_OPT_VERSION": Entry(
+        "specific version: standalone installs it, managers show the pinning command",
+        "конкретная версия: standalone установит её, менеджеры получат команду пиннинга",
+    ),
+    "EXEC_UPDATE_OPT_PRE": Entry(
+        "include pre-releases in the list", "включать пре-релизы в список"
+    ),
+    "EXEC_UPDATE_OPT_SKIP": Entry(
+        "hide the hint until a release newer than the current one appears",
+        "скрыть уведомление до релиза новее текущего",
+    ),
+    "EXEC_UPDATE_OPT_UNSKIP": Entry(
+        "show the hint again", "снова показывать уведомление"
+    ),
+    "EXEC_UPDATE_OPT_LIMIT": Entry(
+        "how many versions to list (max {max})",
+        "сколько версий показать (максимум {max})",
+    ),
+    "EXEC_UPDATE_LIST_STABLE": Entry(
+        "recent stable releases:", "последние стабильные релизы:"
+    ),
+    "EXEC_UPDATE_LIST_PRE": Entry(
+        "recent releases (with pre-releases):", "последние релизы (с пре-релизами):"
+    ),
+    "EXEC_UPDATE_DETECTED": Entry("install source: {kind}", "источник установки: {kind}"),
+    "EXEC_UPDATE_KIND_STANDALONE": Entry("standalone binary", "standalone-бинарник"),
+    "EXEC_UPDATE_KIND_DEV": Entry("repository checkout", "запуск из репозитория"),
+    "EXEC_UPDATE_KIND_UV_TOOL": Entry("uv tool", "uv tool"),
+    "EXEC_UPDATE_KIND_PIPX": Entry("pipx", "pipx"),
+    "EXEC_UPDATE_KIND_PIP": Entry("python package install", "установка python-пакета"),
+    "EXEC_UPDATE_KIND_PIP_DIRECT": Entry("direct python install", "прямая python-установка"),
+    "EXEC_UPDATE_KIND_BREW": Entry("Homebrew", "Homebrew"),
+    "EXEC_UPDATE_KIND_APT": Entry("apt package", "пакет apt"),
+    "EXEC_UPDATE_KIND_PACMAN": Entry("pacman package", "пакет pacman"),
+    "EXEC_UPDATE_KIND_WINGET": Entry("winget package", "пакет winget"),
+    "EXEC_UPDATE_KIND_UNKNOWN": Entry("not detected", "не определено"),
+    "EXEC_UPDATE_CURRENT": Entry("already up to date: {tag}", "уже актуальная версия: {tag}"),
+    "EXEC_UPDATE_CHECK_OUT": Entry(
+        "update available: {tag} (current: {current})",
+        "доступно обновление: {tag} (текущая: {current})",
+    ),
+    "EXEC_UPDATE_CONFIRM": Entry("install the update now?", "установить обновление сейчас?"),
+    "EXEC_UPDATE_DRYRUN": Entry(
+        "dry-run: would install {tag} into {target}",
+        "dry-run: установили бы {tag} в {target}",
+    ),
+    "EXEC_UPDATE_DONE": Entry(
+        "updated to {tag}; previous version kept as {backup}",
+        "обновлено до {tag}; предыдущая версия сохранена как {backup}",
+    ),
+    "EXEC_UPDATE_RESTART_PROMPT": Entry(
+        "restart xrayvpn now?", "перезапустить xrayvpn сейчас?"
+    ),
+    "EXEC_UPDATE_RESTART_MANUAL": Entry(
+        "restart xrayvpn to use the new version",
+        "перезапустите xrayvpn, чтобы использовать новую версию",
+    ),
+    "EXEC_UPDATE_MANAGED": Entry(
+        "this copy is managed by {manager}; files are not touched",
+        "эта копия управляется через {manager}; файлы не трогаем",
+    ),
+    "EXEC_UPDATE_MANAGED_RUN": Entry("run: {commands}", "запустите: {commands}"),
+    "EXEC_UPDATE_MANAGER_AUTO": Entry(
+        "run automatically: {command}", "запустить автоматически: {command}"
+    ),
+    "EXEC_UPDATE_MANAGER_DONE": Entry(
+        "manager command finished (rc={rc})", "команда менеджера завершена (rc={rc})"
+    ),
+    "EXEC_UPDATE_MANAGER_FAIL": Entry(
+        "manager command failed (rc={rc})", "команда менеджера завершилась ошибкой (rc={rc})"
+    ),
+    "EXEC_UPDATE_UNKNOWN": Entry(
+        "cannot tell how xrayvpn was installed; update it the same way you installed it: {page}",
+        "не удалось определить способ установки; обновите тем же способом, которым устанавливали: {page}",
+    ),
+    "EXEC_UPDATE_DEV": Entry(
+        "running from a source checkout; update with git pull and rebuild",
+        "запуск из исходников; обновление — git pull и пересборка",
+    ),
+    "EXEC_UPDATE_SKIP_CONFLICT": Entry(
+        "choose either --skip or --unskip", "выберите что-то одно: --skip или --unskip"
+    ),
+    "EXEC_UPDATE_SKIP_SET": Entry(
+        "update hint hidden until a release newer than {tag}",
+        "уведомление скрыто до релиза новее {tag}",
+    ),
+    "EXEC_UPDATE_SKIP_CLEARED": Entry(
+        "update hint enabled again", "уведомление об обновлениях снова включено"
+    ),
+    "EXEC_UPDATE_NON_TTY": Entry(
+        "not an interactive terminal: use --yes to install without prompts",
+        "не интерактивный терминал: используйте --yes для установки без подтверждений",
+    ),
+    "EXEC_UPDATE_PIN": Entry("pin the version: {command}", "закрепление версии: {command}"),
     "I18N_LANG_WARNING": Entry(
         "warning: unknown {env} value {value!r}; falling back to English",
         "предупреждение: неизвестное значение {env} {value!r}; переключаюсь на английский",
@@ -106,6 +217,10 @@ MESSAGES: Final[dict[str, Entry]] = {
         "status/restart/logs/reboot over SSH",
         "состояние/рестарт/логи/перезагрузка по SSH",
     ),
+    "REPL_WELCOME_CMD_UPDATE": Entry(
+        "check and install a new version",
+        "проверить и установить новую версию",
+    ),
     "REPL_WELCOME_CMD_EXIT": Entry("leave", "выход"),
     "REPL_WELCOME_AUTHOR": Entry("by:", "автор:"),
     "REPL_WELCOME_AUTHOR_NAME": Entry("Tim Korelov", "Tim Korelov"),
@@ -132,6 +247,10 @@ MESSAGES: Final[dict[str, Entry]] = {
     "REPL_HELP_SERVICE": Entry(
         "  service status|restart|logs|reboot --help — recovery actions",
         "  service status|restart|logs|reboot --help — диагностика и восстановление",
+    ),
+    "REPL_HELP_UPDATE": Entry(
+        "  update [--check] [--yes] — check or install a new version",
+        "  update [--check] [--yes] — проверить или установить новую версию",
     ),
     "REPL_HELP_LANG": Entry(
         "  lang ru|en       switch interface language now (рус/англ ok)",

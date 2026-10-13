@@ -21,8 +21,10 @@ from pathlib import Path
 from typing import Any
 
 from xrayvpn import __version__, i18n
+from xrayvpn.core import update_state
 
 RELEASE_OWNER_REPO = "lifestreamy/xrayvpn"
+UPDATE_CMD = "xrayvpn update"
 PROFILE_URL = "https://github.com/lifestreamy"
 REPO_URL = f"https://github.com/{RELEASE_OWNER_REPO}"
 RELEASES_LATEST_API_URL = f"https://api.github.com/repos/{RELEASE_OWNER_REPO}/releases/latest"
@@ -131,6 +133,7 @@ def banner_hint(
     current: str = __version__,
     fetch: Callable[[], str | None] | None = None,
     cache_path: Path | None = None,
+    state_path: Path | None = None,
     now: float | None = None,
 ) -> str | None:
     """One-line user hint, or None when disabled/silent/no update (24h cached)."""
@@ -144,4 +147,7 @@ def banner_hint(
         _store_tag(cache, tag, moment)
     if not tag or not is_newer(tag, current):
         return None
-    return i18n.t("EXEC_UPDATE_AVAILABLE", tag=tag, page=LATEST_RELEASE_PAGE)
+    skip_file = Path(state_path) if state_path is not None else update_state.default_state_path()
+    if update_state.skipped_version(skip_file) == update_state.normalize_tag(tag):
+        return None
+    return i18n.t("EXEC_UPDATE_AVAILABLE", tag=tag, cmd=UPDATE_CMD)

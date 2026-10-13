@@ -11,9 +11,18 @@ from typer.testing import CliRunner
 
 import xrayvpn.cli.main as main_mod
 from xrayvpn import i18n
-from xrayvpn.core import update_check
+from xrayvpn.core import update_check, update_state
 
 runner = CliRunner()
+
+
+@pytest.fixture(autouse=True)
+def _isolate_skip_state(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(
+        update_state,
+        "default_state_path",
+        lambda **kwargs: tmp_path / "update-state.json",
+    )
 
 
 def test_is_newer_numeric_cores() -> None:
@@ -67,7 +76,7 @@ def test_banner_hint_newer_only(tmp_path: Path) -> None:
         fetch=lambda: "v9.9.9",
         cache_path=tmp_path / "c1.json",
     )
-    assert hint and "v9.9.9" in hint and "github.com" in hint
+    assert hint and "v9.9.9" in hint and "xrayvpn update" in hint
     assert (
         update_check.banner_hint(
             packaged=True, env={}, current="0.4.0", fetch=lambda: None,
@@ -213,6 +222,57 @@ def test_banner_hint_silent_when_fetch_finds_nothing(tmp_path: Path) -> None:
     assert (
         update_check.banner_hint(
             packaged=True, env={}, fetch=lambda: None, cache_path=tmp_path / "c.json"
+        )
+        is None
+    )
+
+
+def test_banner_hint_skip_version_snoozes_until_newer(tmp_path: Path) -> None:
+    state = tmp_path / "state.json"
+    cache = tmp_path / "c1.json"
+    hint = update_check.banner_hint(
+        packaged=True,
+        env={},
+        current="0.4.0",
+        fetch=lambda: "v9.9.9",
+        cache_path=cache,
+        state_path=state,
+    )
+    assert hint
+    assert update_state.skip_version(state, "9.9.9")
+    assert (
+        update_check.banner_hint(
+            packaged=True,
+            env={},
+            current="0.4.0",
+            fetch=lambda: "v9.9.9",
+            cache_path=cache,
+            state_path=state,
+        )
+        is None
+    )
+    stronger = update_check.banner_hint(
+        packaged=True,
+        env={},
+        current="0.4.0",
+        fetch=lambda: "v9.10.0",
+        cache_path=tmp_path / "c2.json",
+        state_path=state,
+    )
+    assert stronger and "v9.10.0" in stronger
+
+
+def test_banner_hint_skip_uses_normalized_cores(tmp_path: Path) -> None:
+    state = tmp_path / "state.json"
+    assert update_state.skip_version(state, "v9.9.9_experimental")
+    assert (
+        update_check.banner_hint(
+            packaged=True,
+            env={},
+            current="0.4.0",
+            fetch=lambda: "v9.9.9",
+            cache_path=tmp_path / "c.json",
+            state_path=state,
         )
         is None
     )

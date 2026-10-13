@@ -145,6 +145,25 @@ of the window, 30 minutes by default; Ctrl+C aborts the download and keeps the p
 `service reboot --yes` (last resort, requires the explicit `--yes`). The recovery sequence —
 [`docs/user/RUNBOOK.en.md`](../docs/user/RUNBOOK.en.md).
 
+## Updating (`xrayvpn update`)
+
+The client checks for new versions on GitHub and, when a newer one appears, prints
+"update available — run `xrayvpn update`". What the command does:
+
+- **standalone builds** (the file from Releases) update in place: download the new version,
+  verify SHA256 against the release data, replace the file at the same path and offer a
+  restart. The path never changes — taskbar pins and shortcuts keep working; the previous
+  version stays next to it as `.old` until the new one runs.
+- **package-manager installs** (uv tool, pipx, pip, Homebrew, apt, winget, AUR) are never
+  touched: it prints the upgrade command of that channel and runs it for `uv tool`/`pipx`
+  after confirmation. When the environment is unclear — instructions only.
+
+Extras: `xrayvpn update --check` — check only (exit code `10` when an update is available);
+`xrayvpn update list` — recent stable versions; `xrayvpn update --version 0.4.2` — a specific
+version (standalone installs it, managers get the pinning command); `--skip` / `--unskip` —
+hide the notice until the next release / bring it back; `--yes` — no prompts (for scripts).
+Full flag list: `xrayvpn update --help`.
+
 ## Layout
 
 - `src/xrayvpn/` — the package (`cli/`, `core/`, `core/execution/`, `core/transport/`);

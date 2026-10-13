@@ -110,11 +110,26 @@ def _writable(path: Path) -> bool:
     return os.access(path, os.W_OK)
 
 
-def _state_workspace(env: Mapping[str, str], home: Path) -> Path:
-    if sys.platform == "win32":
+def state_workspace(
+    *,
+    env: Mapping[str, str] | None = None,
+    home: Path | None = None,
+    platform: str | None = None,
+) -> Path:
+    """Per-user state folder (`.../xrayvpn`); platform is injectable for tests."""
+    return _state_workspace(
+        os.environ if env is None else env,
+        Path.home() if home is None else home,
+        sys.platform if platform is None else platform,
+    )
+
+
+def _state_workspace(env: Mapping[str, str], home: Path, platform: str | None = None) -> Path:
+    plat = sys.platform if platform is None else platform
+    if plat == "win32":
         base = env.get("LOCALAPPDATA") or str(home / "AppData" / "Local")
         return Path(base) / "xrayvpn"
-    if sys.platform == "darwin":
+    if plat == "darwin":
         return home / "Library" / "Application Support" / "xrayvpn"
     base = env.get("XDG_DATA_HOME") or str(home / ".local" / "share")
     return Path(base) / "xrayvpn"

@@ -37,6 +37,12 @@ _LANG_ALIASES = {
     "english": "en",
 }
 _EXIT_WORDS = {"exit", "quit", "q"}
+_SESSION_ACTIVE = False
+
+
+def session_active() -> bool:
+    """True while the interactive loop runs (update relies on it for restarts)."""
+    return _SESSION_ACTIVE
 
 
 def session_requested() -> bool:
@@ -193,6 +199,7 @@ def _command_lines() -> list[tuple[str, str]]:
         ("version", i18n.t("REPL_WELCOME_CMD_VERSION")),
         ("banner", i18n.t("REPL_WELCOME_CMD_BANNER")),
         ("service", i18n.t("REPL_WELCOME_CMD_SERVICE")),
+        ("update", i18n.t("REPL_WELCOME_CMD_UPDATE")),
         ("exit|quit|q", i18n.t("REPL_WELCOME_CMD_EXIT")),
     ]
 
@@ -293,6 +300,7 @@ def help_text() -> str:
             i18n.t("REPL_HELP_HEADER"),
             i18n.t("REPL_HELP_DEPLOY"),
             i18n.t("REPL_HELP_SERVICE"),
+            i18n.t("REPL_HELP_UPDATE"),
             i18n.t("REPL_HELP_LANG"),
             i18n.t("REPL_HELP_HELP"),
             i18n.t("REPL_HELP_BANNER"),
@@ -315,12 +323,16 @@ def start(
     A KeyboardInterrupt that escapes the inner handlers (a second Ctrl+C during
     output, one inside paramiko on Windows) still exits cleanly with rc 130.
     """
+    global _SESSION_ACTIVE
+    _SESSION_ACTIVE = True
     try:
         return _session(dispatch, version=version, update_hint=update_hint)
     except KeyboardInterrupt:
         print()
         print(i18n.t("REPL_INTERRUPTED"))
         return 130
+    finally:
+        _SESSION_ACTIVE = False
 
 
 def _session(
