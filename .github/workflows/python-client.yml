@@ -39,7 +39,7 @@ jobs:
           non_docs=$(git diff --name-only \
             "${{ github.event.pull_request.base.sha }}" \
             "${{ github.event.pull_request.head.sha }}" \
-            | grep -vE '\.md$|^docs/|^LICENSE' || true)
+            | grep -vE '\.md$|^docs/|^LICENSE|^\.github/' || true)
           if [ -z "$non_docs" ]; then
             echo "docs_only=true" >> "$GITHUB_OUTPUT"
           else

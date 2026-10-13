@@ -1,5 +1,5 @@
 ---
-# Molecule CI: gate (docs-only classifier), syntax, distro matrix
+# Molecule CI: gate (docs/meta classifier), syntax, distro matrix
 # (ubuntu2204/ubuntu2404/debian12 containers), native (full host run).
 # Triggers: pull_request, workflow_dispatch (main protected; dev line via dispatch).
 # Firewall off in distro legs: scoping; ufw tasks work in containers (verified);
@@ -43,7 +43,7 @@ jobs:
           non_docs=$(git diff --name-only \
             "${{ github.event.pull_request.base.sha }}" \
             "${{ github.event.pull_request.head.sha }}" \
-            | grep -vE '\.md$|^docs/|^LICENSE' || true)
+            | grep -vE '\.md$|^docs/|^LICENSE|^\.github/' || true)
           if [ -z "$non_docs" ]; then
             echo "docs_only=true" >> "$GITHUB_OUTPUT"
           else
