@@ -143,11 +143,8 @@
   tags: config,debug
 
 - name: Derive public key from migrated private key
-  ansible.builtin.shell: |
-    set -o pipefail
-    {{ xray_cli_command }} x25519 -i {{ migrated_private_key }}
-  args:
-    executable: /bin/bash
+  ansible.builtin.command:
+    cmd: "{{ xray_cli_command }} x25519 -i {{ migrated_private_key }}"
   register: migrated_public_key_raw
   changed_when: false
   no_log: true
@@ -243,13 +240,18 @@
   tags: config
 
 - name: Generate fresh REALITY private key
-  ansible.builtin.shell: |
-    set -o pipefail
-    {{ xray_cli_command }} x25519 | awk -F': ' '/^PrivateKey:/ {print $2; exit}'
-  args:
-    executable: /bin/bash
-  register: fresh_private_key_raw
+  ansible.builtin.command:
+    cmd: "{{ xray_cli_command }} x25519"
+  register: fresh_x25519_raw
   changed_when: false
+  when: xray_generate_identity | bool
+  tags: config
+
+- name: Extract fresh REALITY private key
+  ansible.builtin.set_fact:
+    fresh_private_key_raw:
+      stdout: "{{ fresh_x25519_raw.stdout_lines | select('match', '^PrivateKey:') | first | default('', true) | regex_replace('^PrivateKey:\\s*', '') | trim }}"
+      stdout_lines: "{{ fresh_x25519_raw.stdout_lines }}"
   when: xray_generate_identity | bool
   tags: config
 
@@ -265,11 +267,8 @@
   tags: config,debug
 
 - name: Derive public key from fresh private key
-  ansible.builtin.shell: |
-    set -o pipefail
-    {{ xray_cli_command }} x25519 -i {{ fresh_private_key_raw.stdout }}
-  args:
-    executable: /bin/bash
+  ansible.builtin.command:
+    cmd: "{{ xray_cli_command }} x25519 -i {{ fresh_private_key_raw.stdout }}"
   register: fresh_public_key_raw
   changed_when: false
   no_log: true
@@ -349,7 +348,9 @@
 
 - name: Generate fresh client UUIDs
   ansible.builtin.set_fact:
-    fresh_uuids: "{{ fresh_uuids | default([]) + [lookup('pipe', 'uuidgen')] }}"
+    fresh_uuids: >-
+      {{ fresh_uuids | default([]) + [lookup('pipe',
+      (ansible_playbook_python | default('python3')) ~ ' -c "import uuid; print(uuid.uuid4())"')] }}
   loop: "{{ range(num_clients | int) | list }}"
   when: xray_generate_identity | bool
   tags: config
@@ -406,7 +407,9 @@
 # Append-only: never truncates stored UUIDs.
 - name: Ensure state has enough UUIDs for num_clients
   ansible.builtin.set_fact:
-    reality_state: "{{ reality_state | combine({'client_uuids': reality_state.client_uuids + [lookup('pipe', 'uuidgen')]}) }}"
+    reality_state: >-
+      {{ reality_state | combine({'client_uuids': reality_state.client_uuids + [lookup('pipe',
+      (ansible_playbook_python | default('python3')) ~ ' -c "import uuid; print(uuid.uuid4())"')]}) }}
   loop: "{{ range([0, (num_clients | int) - (reality_state.client_uuids | length)] | max) | list }}"
   when:
     - reality_state is defined
