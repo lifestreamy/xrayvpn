@@ -11,6 +11,7 @@
       # NOT: vars_files sit above play vars in the current precedence list).
       # molecule 26.8 default driver also ignores provisioner.inventory.group_vars.
       num_clients: 1
+      xray_client_server_host: 203.0.113.9
       warp_enabled: false
       xray_backup_enabled: false
       xray_reality_rotate: false

@@ -34,15 +34,19 @@ class RecordingRemote:
 
 
 class _NoopExecutor:
+    extra_vars_seen: ClassVar[dict | None] = None
+
     def __init__(self, remote: object, *, cleanup: str) -> None:
         pass
 
     def deploy(self, request: object, *, extra_vars: dict) -> int:
+        _NoopExecutor.extra_vars_seen = extra_vars
         return 0
 
 
 def _stub(monkeypatch, tmp_path: Path, cfg: Path) -> None:
     RecordingRemote.instances = []
+    _NoopExecutor.extra_vars_seen = None
     monkeypatch.setattr(main_mod, "find_repo_root", lambda: tmp_path)
     monkeypatch.setattr(main_mod, "load_settings", lambda root: {})
     monkeypatch.setattr(main_mod, "_swap_guard", lambda remote, *, no_interactive: None)
@@ -87,6 +91,35 @@ def test_remote_use_inventory_resolves_alias(monkeypatch, tmp_path: Path) -> Non
     assert remote.host == "203.0.113.9"
     assert remote.kwargs["user"] == "deploy"
     assert remote.kwargs["port"] == 2222
+    assert _NoopExecutor.extra_vars_seen is not None
+    assert _NoopExecutor.extra_vars_seen["xray_client_server_host"] == "203.0.113.9"
+
+
+def test_remote_host_alias_reaches_extra_vars(monkeypatch, tmp_path: Path) -> None:
+    cfg = tmp_path / "ssh_config"
+    cfg.write_text(
+        "Host myvps\n  HostName 203.0.113.9\n  User deploy\n",
+        encoding="utf-8",
+    )
+    key = tmp_path / "id_alias"
+    key.write_text("k", encoding="utf-8")
+    _stub(monkeypatch, tmp_path, cfg)
+    result = runner.invoke(
+        app,
+        [
+            "deploy",
+            "--execution",
+            "remote",
+            "-H",
+            "myvps",
+            "--pkey",
+            str(key),
+            "--no-interactive",
+        ],
+    )
+    assert result.exit_code == 0, _output(result)
+    assert _NoopExecutor.extra_vars_seen is not None
+    assert _NoopExecutor.extra_vars_seen["xray_client_server_host"] == "203.0.113.9"
 
 
 def test_remote_use_inventory_alias_identity_used(monkeypatch, tmp_path: Path) -> None:

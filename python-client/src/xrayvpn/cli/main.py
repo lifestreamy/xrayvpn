@@ -31,7 +31,7 @@ from xrayvpn import __version__, display_version, i18n
 from xrayvpn.cli import l10n_typer, prompts, repl, service, theme
 from xrayvpn.core import install_source, runtime_paths, update, update_check, update_state, wsl
 from xrayvpn.core.config import find_repo_root, load_settings, merge_overrides
-from xrayvpn.core.conn import apply_ssh_config, ssh_config_entry
+from xrayvpn.core.conn import apply_ssh_config, resolve_client_host, ssh_config_entry
 from xrayvpn.core.deploy_lock import DeployBusy, deploy_lock
 from xrayvpn.core.execution.base import DeployRequest
 from xrayvpn.core.execution.local import DEFAULT_WSL_VENV, LocalExecutor, build_ssh_inventory_vars
@@ -931,6 +931,9 @@ def _run_remote(
     if resolved_pkey is None and resolved_password is None and alias_key:
         resolved_pkey = alias_key
 
+    # Rendered on the server, where the inventory host name is not the address.
+    deploy_vars = {**extra_vars, "xray_client_server_host": str(resolved_host)}
+
     if resolved_pkey is not None and resolved_password is not None:
         typer.echo(i18n.t("MAIN_ERR_KEY_AND_PASS"), err=True)
         raise typer.Exit(2)
@@ -983,7 +986,7 @@ def _run_remote(
         ) as remote:
             _swap_guard(remote, no_interactive=no_interactive)
             executor = RemoteExecutor(remote, cleanup=cleanup)
-            rc = executor.deploy(request, extra_vars=extra_vars)
+            rc = executor.deploy(request, extra_vars=deploy_vars)
             if rc == 0:
                 _deploy_success_banner(request.resolved_clients_dir())
     except KeyboardInterrupt:
@@ -1199,6 +1202,11 @@ def _run_local(
         temp_inventory = write_inventory(workspace, content)
         temp_inventory.chmod(0o600)
         inventory = temp_inventory
+
+    request.overrides = {
+        **request.overrides,
+        "xray_client_server_host": resolve_client_host(str(resolved_host)),
+    }
 
     try:
         try:

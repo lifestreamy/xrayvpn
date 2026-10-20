@@ -1,0 +1,3 @@
+---
+# Address written into client configs; clients pass the resolved host explicitly.
+xray_client_server_host: "{{ ansible_host }}"
