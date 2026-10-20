@@ -138,6 +138,13 @@ def test_fetch_latest_release_parses_and_handles_empty_tag() -> None:
         upd.fetch_latest_release(http=lambda url: b"[]")
 
 
+def test_is_unrecommended_normalizes_tags() -> None:
+    assert upd.is_unrecommended("0.4.3")
+    assert upd.is_unrecommended("v0.4.2")
+    assert not upd.is_unrecommended("0.4.4")
+    assert not upd.is_unrecommended("v0.5.0")
+
+
 def test_list_versions_filters_and_clamps() -> None:
     many = [_release_payload(f"v0.5.{index}") for index in range(25)]
     mixed = [_release_payload("v0.6.0_experimental", prerelease=True)] + many

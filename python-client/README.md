@@ -168,6 +168,9 @@ uv run --project python-client xrayvpn deploy --host 1.2.3.4 --dry-run
 `--skip` / `--unskip` — скрыть уведомление до следующего релиза / вернуть; `--yes` — без
 вопросов (для скриптов). Полный список флагов: `xrayvpn update --help`.
 
+В `update list` строки с `!` — нерекомендованные сборки; причина и версия с исправлением —
+в легенде под списком.
+
 ## Где что лежит
 
 - `src/xrayvpn/` — пакет (`cli/`, `core/`, `core/execution/`, `core/transport/`);

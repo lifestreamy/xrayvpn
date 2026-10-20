@@ -207,8 +207,20 @@ def update_list(
         typer.echo(i18n.t("EXEC_UPDATE_LIST_PRE"))
     else:
         typer.echo(i18n.t("EXEC_UPDATE_LIST_STABLE"))
+    marked = False
     for release in releases:
-        typer.echo(f"  {release.tag:16} {release.published_at[:10]}  {release.html_url}")
+        bad = update.is_unrecommended(release.version)
+        marked = marked or bad
+        marker = "!" if bad else " "
+        typer.echo(f"{marker} {release.tag:16} {release.published_at[:10]}  {release.html_url}")
+    if marked:
+        typer.echo(
+            i18n.t(
+                "EXEC_UPDATE_LIST_BAD",
+                reason=i18n.t("EXEC_UPDATE_BAD_REASON"),
+                fixed=update.UNRECOMMENDED_FIXED_IN,
+            )
+        )
     raise typer.Exit(0)
 
 
@@ -323,6 +335,17 @@ def _update_flow(
             return 0
         info = install_source.detect()
         typer.echo(i18n.t("EXEC_UPDATE_DETECTED", kind=_kind_label(info.kind)))
+        if version is not None and not check and update.is_unrecommended(version):
+            typer.echo(
+                theme.warn(
+                    i18n.t(
+                        "EXEC_UPDATE_UNRECOMMENDED",
+                        tag=version,
+                        reason=i18n.t("EXEC_UPDATE_BAD_REASON"),
+                        fixed=update.UNRECOMMENDED_FIXED_IN,
+                    )
+                )
+            )
         if (
             version is not None
             and not check

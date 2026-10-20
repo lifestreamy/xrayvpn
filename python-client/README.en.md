@@ -164,6 +164,9 @@ version (standalone installs it, managers get the pinning command); `--skip` / `
 hide the notice until the next release / bring it back; `--yes` — no prompts (for scripts).
 Full flag list: `xrayvpn update --help`.
 
+In `update list`, lines marked `!` are not recommended; the legend under the list names the
+reason and the fixed version.
+
 ## Layout
 
 - `src/xrayvpn/` — the package (`cli/`, `core/`, `core/execution/`, `core/transport/`);

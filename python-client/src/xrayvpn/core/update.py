@@ -43,6 +43,9 @@ LATEST_JSON_NAME = "latest.json"
 SUMS_NAME = "SHA256SUMS.txt"
 NETWORK_TIMEOUT_SECONDS = 10.0
 UPDATE_FEATURE_VERSION = "0.4.3"
+# Fresh remote deploys wrote the inventory host name instead of the server address.
+UNRECOMMENDED_VERSIONS = frozenset({"0.4.1", "0.4.2", "0.4.3"})
+UNRECOMMENDED_FIXED_IN = "0.4.4"
 LIST_LIMIT_DEFAULT = 10
 LIST_LIMIT_MAX = 20
 SHA256_HEX_LENGTH = 64
@@ -121,6 +124,10 @@ def _has_portable_asset(raw_assets: Any) -> bool:
         isinstance(asset, Mapping) and "-portable" in str(asset.get("name") or "")
         for asset in raw_assets
     )
+
+
+def is_unrecommended(version: str) -> bool:
+    return normalize_tag(version) in UNRECOMMENDED_VERSIONS
 
 
 def parse_releases(payload: Any, *, include_prerelease: bool = False) -> list[Release]:
