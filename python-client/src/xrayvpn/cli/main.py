@@ -31,7 +31,7 @@ from xrayvpn import __version__, display_version, i18n
 from xrayvpn.cli import l10n_typer, prompts, repl, service, theme
 from xrayvpn.core import install_source, runtime_paths, update, update_check, update_state, wsl
 from xrayvpn.core.config import find_repo_root, load_settings, merge_overrides
-from xrayvpn.core.conn import apply_ssh_config, ssh_config_entry
+from xrayvpn.core.conn import apply_ssh_config, resolve_client_host, ssh_config_entry
 from xrayvpn.core.deploy_lock import DeployBusy, deploy_lock
 from xrayvpn.core.execution.base import DeployRequest
 from xrayvpn.core.execution.local import DEFAULT_WSL_VENV, LocalExecutor, build_ssh_inventory_vars
@@ -207,8 +207,20 @@ def update_list(
         typer.echo(i18n.t("EXEC_UPDATE_LIST_PRE"))
     else:
         typer.echo(i18n.t("EXEC_UPDATE_LIST_STABLE"))
+    marked = False
     for release in releases:
-        typer.echo(f"  {release.tag:16} {release.published_at[:10]}  {release.html_url}")
+        bad = update.is_unrecommended(release.version)
+        marked = marked or bad
+        marker = "!" if bad else " "
+        typer.echo(f"{marker} {release.tag:16} {release.published_at[:10]}  {release.html_url}")
+    if marked:
+        typer.echo(
+            i18n.t(
+                "EXEC_UPDATE_LIST_BAD",
+                reason=i18n.t("EXEC_UPDATE_BAD_REASON"),
+                fixed=update.UNRECOMMENDED_FIXED_IN,
+            )
+        )
     raise typer.Exit(0)
 
 
@@ -323,6 +335,17 @@ def _update_flow(
             return 0
         info = install_source.detect()
         typer.echo(i18n.t("EXEC_UPDATE_DETECTED", kind=_kind_label(info.kind)))
+        if version is not None and not check and update.is_unrecommended(version):
+            typer.echo(
+                theme.warn(
+                    i18n.t(
+                        "EXEC_UPDATE_UNRECOMMENDED",
+                        tag=version,
+                        reason=i18n.t("EXEC_UPDATE_BAD_REASON"),
+                        fixed=update.UNRECOMMENDED_FIXED_IN,
+                    )
+                )
+            )
         if (
             version is not None
             and not check
@@ -931,6 +954,9 @@ def _run_remote(
     if resolved_pkey is None and resolved_password is None and alias_key:
         resolved_pkey = alias_key
 
+    # Rendered on the server, where the inventory host name is not the address.
+    deploy_vars = {**extra_vars, "xray_client_server_host": str(resolved_host)}
+
     if resolved_pkey is not None and resolved_password is not None:
         typer.echo(i18n.t("MAIN_ERR_KEY_AND_PASS"), err=True)
         raise typer.Exit(2)
@@ -983,7 +1009,7 @@ def _run_remote(
         ) as remote:
             _swap_guard(remote, no_interactive=no_interactive)
             executor = RemoteExecutor(remote, cleanup=cleanup)
-            rc = executor.deploy(request, extra_vars=extra_vars)
+            rc = executor.deploy(request, extra_vars=deploy_vars)
             if rc == 0:
                 _deploy_success_banner(request.resolved_clients_dir())
     except KeyboardInterrupt:
@@ -1199,6 +1225,11 @@ def _run_local(
         temp_inventory = write_inventory(workspace, content)
         temp_inventory.chmod(0o600)
         inventory = temp_inventory
+
+    request.overrides = {
+        **request.overrides,
+        "xray_client_server_host": resolve_client_host(str(resolved_host)),
+    }
 
     try:
         try:

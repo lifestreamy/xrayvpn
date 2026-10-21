@@ -52,7 +52,7 @@ dns:
 proxies:
   - name: "Xray REALITY"
     type: vless
-    server: "{{ ansible_host }}"
+    server: "{{ xray_client_server_host }}"
     port: "{{ xray_port | default(443) }}"
     uuid: "{{ item.1 }}"
     network: tcp
@@ -74,12 +74,12 @@ proxy-groups:
 rules:
   # Pin this server DIRECT: with the tunnel up, connections to the server's
   # own address (SSH on --port, health checks) would otherwise hairpin it.
-{% if ':' in ansible_host %}
-  - IP-CIDR6,{{ ansible_host }}/128,DIRECT,no-resolve
-{% elif ansible_host is match('^([0-9]{1,3}\.){3}[0-9]{1,3}$') %}
-  - IP-CIDR,{{ ansible_host }}/32,DIRECT,no-resolve
+{% if ':' in xray_client_server_host %}
+  - IP-CIDR6,{{ xray_client_server_host }}/128,DIRECT,no-resolve
+{% elif xray_client_server_host is match('^([0-9]{1,3}\.){3}[0-9]{1,3}$') %}
+  - IP-CIDR,{{ xray_client_server_host }}/32,DIRECT,no-resolve
 {% else %}
-  - DOMAIN,{{ ansible_host }},DIRECT
+  - DOMAIN,{{ xray_client_server_host }},DIRECT
 {% endif %}
 
   # Localhost & LAN bypass (Fix for Ollama, etc.)

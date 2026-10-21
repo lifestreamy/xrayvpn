@@ -129,6 +129,20 @@ MESSAGES: Final[dict[str, Entry]] = {
     "EXEC_UPDATE_LIST_PRE": Entry(
         "recent releases (with pre-releases):", "последние релизы (с пре-релизами):"
     ),
+    "EXEC_UPDATE_BAD_REASON": Entry(
+        "fresh remote deploys wrote the inventory host name into client configs "
+        "instead of the server address",
+        "свежий remote-деплой писал в клиентские конфиги имя inventory "
+        "вместо адреса сервера",
+    ),
+    "EXEC_UPDATE_LIST_BAD": Entry(
+        "! — not recommended: {reason} (fixed in {fixed})",
+        "! — не рекомендуется: {reason} (исправлено в {fixed})",
+    ),
+    "EXEC_UPDATE_UNRECOMMENDED": Entry(
+        "warning: {tag} is not recommended: {reason} (fixed in {fixed})",
+        "внимание: {tag} не рекомендуется: {reason} (исправлено в {fixed})",
+    ),
     "EXEC_UPDATE_DETECTED": Entry("install source: {kind}", "источник установки: {kind}"),
     "EXEC_UPDATE_KIND_STANDALONE": Entry("standalone binary", "standalone-бинарник"),
     "EXEC_UPDATE_KIND_DEV": Entry("repository checkout", "запуск из репозитория"),
@@ -287,8 +301,8 @@ MESSAGES: Final[dict[str, Entry]] = {
         "заметка: язык встроенного --help фиксируется при запуске процесса (--ru / XRAYVPN_LANG).",
     ),
     "REPL_KI_TIP": Entry(
-        'type "exit" or press Ctrl+D to leave',
-        'введите "exit" или нажмите Ctrl+D для выхода',
+        "type exit|quit|q or press Ctrl+D to leave",
+        "введите exit|quit|q или нажмите Ctrl+D для выхода",
     ),
     "REPL_UNKNOWN_OPT": Entry(
         "unknown option: {opts} (help — command list)",

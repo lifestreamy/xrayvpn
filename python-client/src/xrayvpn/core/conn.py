@@ -58,6 +58,19 @@ def ssh_config_entry(
     return entry
 
 
+def resolve_client_host(
+    host: str,
+    *,
+    config_path: Path | str | None = None,
+) -> str:
+    """Address a client config should advertise: the ssh-config HostName when
+    a block governs `host`, the host itself otherwise (plain IP or DNS)."""
+    entry = ssh_config_entry(host, config_path=config_path)
+    if not entry:
+        return host
+    return str(entry.get("hostname") or host)
+
+
 def apply_ssh_config(
     host: str,
     user: str,

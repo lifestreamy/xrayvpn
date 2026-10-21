@@ -58,6 +58,7 @@ def _stub_local_mode(monkeypatch, tmp_path: Path) -> dict[str, object]:
     monkeypatch.setattr(main_mod, "write_inventory", fake_write_inventory)
     monkeypatch.setattr(main_mod, "LocalExecutor", RecordingExecutor)
     monkeypatch.setattr(main_mod, "ssh_config_entry", lambda host, **kwargs: None)
+    monkeypatch.setattr(main_mod, "resolve_client_host", lambda host, **kwargs: host)
     return written
 
 
@@ -138,6 +139,43 @@ def test_local_use_inventory_does_not_apply_ssh_config(monkeypatch, tmp_path) ->
     assert result.exit_code == 0, _output(result)
 
 
+def test_local_use_inventory_resolves_alias_for_client_host(
+    monkeypatch, tmp_path: Path
+) -> None:
+    written = _stub_local_mode(monkeypatch, tmp_path)
+    cfg = tmp_path / "ssh_config"
+    cfg.write_text("Host myvps\n  HostName 203.0.113.9\n", encoding="utf-8")
+    monkeypatch.setattr(
+        main_mod,
+        "resolve_client_host",
+        lambda host, **kw: conn_mod.resolve_client_host(host, config_path=cfg),
+    )
+
+    def explode(*args: object, **kwargs: object):
+        raise AssertionError("apply_ssh_config must not run with --use-inventory")
+
+    monkeypatch.setattr(main_mod, "apply_ssh_config", explode)
+    (tmp_path / "inventory.yml").write_text(
+        "all:\n"
+        "  hosts:\n"
+        "    vps:\n"
+        "      ansible_host: myvps\n"
+        "      ansible_user: root\n"
+        "      ansible_port: 22\n"
+        "      ansible_ssh_pass: hostpw\n",
+        encoding="utf-8",
+    )
+    result = runner.invoke(
+        app, ["deploy", "--execution", "local", "--use-inventory", "--no-interactive"]
+    )
+    assert result.exit_code == 0, _output(result)
+    request, inventory = RecordingExecutor.instances[-1].deployed_with
+    assert request.overrides["xray_client_server_host"] == "203.0.113.9"
+    assert request.inventory_path is None
+    assert inventory == tmp_path / "inv.yml"
+    assert "ansible_host: myvps" in str(written["content"])
+
+
 def test_explicit_pkey_wins_over_alias_key(monkeypatch, tmp_path) -> None:
     written = _stub_local_mode(monkeypatch, tmp_path)
     flag_key = tmp_path / "flag_id"
@@ -202,6 +240,11 @@ def _use_real_ssh_config(monkeypatch, cfg: Path) -> None:
         "ssh_config_entry",
         lambda host, **kw: conn_mod.ssh_config_entry(host, config_path=cfg),
     )
+    monkeypatch.setattr(
+        main_mod,
+        "resolve_client_host",
+        lambda host, **kw: conn_mod.resolve_client_host(host, config_path=cfg),
+    )
 
 
 def test_full_config_block_pins_nothing_without_flags(monkeypatch, tmp_path: Path) -> None:
@@ -222,6 +265,8 @@ def test_full_config_block_pins_nothing_without_flags(monkeypatch, tmp_path: Pat
     assert "ansible_user" not in content
     assert "ansible_port" not in content
     assert "ansible_ssh" not in content
+    request, _inventory = RecordingExecutor.instances[-1].deployed_with
+    assert request.overrides["xray_client_server_host"] == "203.0.113.9"
 
 
 def test_identityfile_only_alias_delegates_auth(monkeypatch, tmp_path: Path) -> None:
@@ -229,7 +274,10 @@ def test_identityfile_only_alias_delegates_auth(monkeypatch, tmp_path: Path) -> 
     alias_key = tmp_path / "alias_id"
     alias_key.write_text("k", encoding="utf-8")
     cfg = tmp_path / "ssh_config"
-    cfg.write_text(f"Host myvps\n  IdentityFile {alias_key.as_posix()}\n", encoding="utf-8")
+    cfg.write_text(
+        f"Host myvps\n  HostName 203.0.113.9\n  IdentityFile {alias_key.as_posix()}\n",
+        encoding="utf-8",
+    )
     _use_real_ssh_config(monkeypatch, cfg)
     _no_getpass(monkeypatch)
     result = runner.invoke(
@@ -240,6 +288,8 @@ def test_identityfile_only_alias_delegates_auth(monkeypatch, tmp_path: Path) -> 
     assert "ansible_host: myvps" in content
     assert "ansible_user" not in content
     assert "ansible_ssh_private_key_file" not in content
+    request, _inventory = RecordingExecutor.instances[-1].deployed_with
+    assert request.overrides["xray_client_server_host"] == "203.0.113.9"
 
 
 def test_explicit_user_flag_pins_user_despite_config(monkeypatch, tmp_path: Path) -> None:

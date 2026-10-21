@@ -283,6 +283,45 @@ def test_update_list_prints_releases(
     assert "v0.4.2" in result.output
 
 
+def test_update_list_marks_not_recommended(
+    monkeypatch: pytest.MonkeyPatch, state_file: Path
+) -> None:
+    monkeypatch.setattr(
+        update,
+        "list_versions",
+        lambda *, limit=10, include_prerelease=False, http=None: [
+            _release("v0.4.4"),
+            _release("v0.4.3"),
+        ],
+    )
+    result = runner.invoke(main_mod.app, ["update", "list"])
+    assert result.exit_code == 0
+    lines = result.output.splitlines()
+    assert any(line.startswith("! v0.4.3") for line in lines)
+    assert any(line.startswith("  v0.4.4") for line in lines)
+    assert ("not recommended" in result.output) or ("не рекомендуется" in result.output)
+
+
+def test_update_version_warns_when_not_recommended(
+    monkeypatch: pytest.MonkeyPatch, state_file: Path
+) -> None:
+    monkeypatch.setattr(install_source, "detect", lambda: _info(install_source.STANDALONE))
+    monkeypatch.setattr(
+        update, "resolve_release", lambda requested_version, http=None: _release("v0.4.3")
+    )
+    result = runner.invoke(main_mod.app, ["update", "--version", "0.4.3", "--dry-run"])
+    assert result.exit_code == 0
+    assert ("not recommended" in result.output) or ("не рекомендуется" in result.output)
+
+    monkeypatch.setattr(
+        update, "resolve_release", lambda requested_version, http=None: _release("v0.4.4")
+    )
+    clean = runner.invoke(main_mod.app, ["update", "--version", "0.4.4", "--dry-run"])
+    assert clean.exit_code == 0
+    assert "not recommended" not in clean.output
+    assert "не рекомендуется" not in clean.output
+
+
 def test_update_list_error_is_rc1(
     monkeypatch: pytest.MonkeyPatch, state_file: Path
 ) -> None:

@@ -79,6 +79,23 @@
     remote_src: true
     mode: "0640"
 
+- name: Slurp staged clash config before adaptation
+  ansible.builtin.slurp:
+    src: "/root/vpn-configs/e2e/clash_e2e.yaml"
+  register: staged_clash
+  changed_when: false
+
+- name: Assert the staged clash config advertises the converge server address
+  ansible.builtin.assert:
+    that:
+      - staged_clash_text is search(expected_server)
+    fail_msg: >-
+      clash_client_0.yaml lost the resolved server address; the 127.0.0.1
+      rewrite below would mask it
+  vars:
+    staged_clash_text: "{{ staged_clash.content | b64decode }}"
+    expected_server: 'server: "203\.0\.113\.9"'
+
 - name: "Adapt clash config: server to 127.0.0.1"
   ansible.builtin.replace:
     path: "/root/vpn-configs/e2e/clash_e2e.yaml"

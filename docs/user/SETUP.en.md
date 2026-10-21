@@ -1,7 +1,9 @@
 # SETUP — install and configure
 
 A console application: everything for the first run and regular use. Technical details live in the neighbouring files.
-Requirements: a VPS — fresh Ubuntu 20.04+ or Debian 11+, root or sudo, a public IP; on Windows for local mode — WSL2 with Ubuntu/Debian.
+Requirements: a VPS — fresh Ubuntu 20.04+ or Debian 11+, root or sudo, a public IP. Local mode
+needs `ansible-playbook` on the machine you run from (on Windows — WSL2 with Ubuntu/Debian), plus
+`sshpass` for password auth; remote installs the server-side dependencies itself.
 
 ## Contents
 

@@ -11,7 +11,26 @@ Format:
 - Entries are built from commits and land in the release commit; no auto-bump.
 - The RU/EN pair is updated in the same commit; section structure is mirrored.
 
+## v0.4.4 — 2026-10-21
+
+The server address in client configs and the `uuidgen` dependency are fixed.
+
+### Fixed
+- The remote deploy (default) wrote the inventory host name (`vpn`) instead of the server address
+  into `client_*.json` and `clash_client_*.yaml`; the client now passes the address the host
+  resolves to.
+- Local with an SSH alias and `--use-inventory` with an alias wrote the alias instead of the
+  address; the address is now passed explicitly.
+- Key generation no longer needs `uuidgen` or `awk` — Python only.
+- `update list` marks v0.4.1–v0.4.3 as not recommended; `update --version` warns.
+
+### Changed
+- The Ctrl+C tip lists all exit commands: `exit`, `quit`, `q`.
+
 ## v0.4.3 — 2026-10-13
+
+Status: not recommended — a fresh remote deploy wrote `vpn` instead of the server address;
+fixed in v0.4.4.
 
 The client can now update itself; no breaking changes.
 
@@ -34,6 +53,9 @@ The client can now update itself; no breaking changes.
 
 ## v0.4.2 — 2026-10-11
 
+Status: not recommended — a fresh remote deploy wrote `vpn` instead of the server address;
+fixed in v0.4.4.
+
 ### Added
 - The release date shows next to the version: the banner, `--version`, and the session's
   `version` command.
@@ -51,6 +73,9 @@ The client can now update itself; no breaking changes.
   the empty short ID stays allowed server-side, so already-issued profiles keep working.
 
 ## v0.4.1 — 2026-09-22
+
+Status: not recommended — a fresh remote deploy wrote `vpn` instead of the server address;
+fixed in v0.4.4.
 
 There was no v0.4.0 release: this section covers the whole 0.4.x line.
 

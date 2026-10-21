@@ -60,6 +60,39 @@
       register: client_yaml
       failed_when: not client_yaml.stat.exists
 
+    - name: Slurp client JSON config for the advertised-address assert
+      ansible.builtin.slurp:
+        src: "{{ xray_client_configs_dir }}/client_0.json"
+      register: client_json_content
+      changed_when: false
+
+    - name: Slurp clash profile for the advertised-address asserts
+      ansible.builtin.slurp:
+        src: "{{ xray_client_configs_dir }}/clash_client_0.yaml"
+      register: clash_profile
+      changed_when: false
+
+    - name: Assert client JSON advertises the converge server address
+      ansible.builtin.assert:
+        that:
+          - client_json_doc.outbounds[0].settings.vnext[0].address == '203.0.113.9'
+        fail_msg: >-
+          client_0.json must carry the address passed by the client, not the
+          inventory host name
+      vars:
+        client_json_doc: "{{ client_json_content.content | b64decode | from_json }}"
+
+    - name: Assert clash profile advertises the converge server and pins it DIRECT
+      ansible.builtin.assert:
+        that:
+          - clash_text is search(expected_server)
+          - clash_text is search(expected_rule)
+        fail_msg: "clash profile lost the resolved server address or its anti-hairpin rule"
+      vars:
+        clash_text: "{{ clash_profile.content | b64decode }}"
+        expected_server: 'server: "203\.0\.113\.9"'
+        expected_rule: 'IP-CIDR,203\.0\.113\.9/32,DIRECT'
+
     - name: Run shared shortId checks (adoption/heal coverage)
       ansible.builtin.import_tasks: ../default/reality-short-id.yml
 

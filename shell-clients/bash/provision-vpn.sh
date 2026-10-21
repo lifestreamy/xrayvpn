@@ -514,6 +514,9 @@ fi
 
 export ANSIBLE_HOST_KEY_CHECKING=False
 
+RESOLVED_HOST="$(ssh -G "$HOST" 2>/dev/null | awk '$1=="hostname"{print $2; exit}' || true)"
+RESOLVED_HOST="${RESOLVED_HOST:-$HOST}"
+
 ANSIBLE_CMD=(ansible-playbook)
 if [[ "$ANSIBLE_VERBOSE_LEVEL" -eq 3 ]]; then
     ANSIBLE_CMD+=(-vvv)
@@ -542,6 +545,7 @@ fi
 if [[ -n "$CAMOUFLAGE" ]]; then
     ANSIBLE_CMD+=(-e "reality_camouflage_domain=$CAMOUFLAGE")
 fi
+ANSIBLE_CMD+=(-e "xray_client_server_host=$RESOLVED_HOST")
 if [[ "$USE_INVENTORY" -eq 1 ]]; then
     ANSIBLE_CMD+=(-i "$INVENTORY_FILE" deploy.yml)
 else

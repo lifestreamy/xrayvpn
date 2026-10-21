@@ -4,7 +4,12 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from xrayvpn.core.conn import apply_ssh_config, resolve_connection, ssh_config_entry
+from xrayvpn.core.conn import (
+    apply_ssh_config,
+    resolve_client_host,
+    resolve_connection,
+    ssh_config_entry,
+)
 
 
 def _write_config(tmp_path: Path) -> tuple[Path, Path]:
@@ -115,3 +120,11 @@ def test_cp1251_config_still_resolves(tmp_path: Path) -> None:
     )
     host, user, port, identity = apply_ssh_config("myvps", "root", 22, config_path=cfg)
     assert (host, user, port, identity) == ("203.0.113.9", "admin", 2222, None)
+
+
+def test_resolve_client_host_maps_alias_and_keeps_plain_hosts(tmp_path: Path) -> None:
+    cfg, _ = _write_config(tmp_path)
+    assert resolve_client_host("myvps", config_path=cfg) == "203.0.113.9"
+    assert resolve_client_host("203.0.113.7", config_path=cfg) == "203.0.113.7"
+    assert resolve_client_host("plain.example", config_path=cfg) == "plain.example"
+    assert resolve_client_host("h", config_path=tmp_path / "missing") == "h"

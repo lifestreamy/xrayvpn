@@ -159,10 +159,13 @@ The client checks for new versions on GitHub and, when a newer one appears, prin
   after confirmation. When the environment is unclear — instructions only.
 
 Extras: `xrayvpn update --check` — check only (exit code `10` when an update is available);
-`xrayvpn update list` — recent stable versions; `xrayvpn update --version 0.4.3` — a specific
+`xrayvpn update list` — recent stable versions; `xrayvpn update --version 0.4.4` — a specific
 version (standalone installs it, managers get the pinning command); `--skip` / `--unskip` —
 hide the notice until the next release / bring it back; `--yes` — no prompts (for scripts).
 Full flag list: `xrayvpn update --help`.
+
+In `update list`, lines marked `!` are not recommended; the legend under the list names the
+reason and the fixed version.
 
 ## Layout
 
