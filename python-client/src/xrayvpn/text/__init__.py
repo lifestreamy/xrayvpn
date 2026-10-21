@@ -301,8 +301,8 @@ MESSAGES: Final[dict[str, Entry]] = {
         "заметка: язык встроенного --help фиксируется при запуске процесса (--ru / XRAYVPN_LANG).",
     ),
     "REPL_KI_TIP": Entry(
-        'type "exit" or press Ctrl+D to leave',
-        'введите "exit" или нажмите Ctrl+D для выхода',
+        "type exit|quit|q or press Ctrl+D to leave",
+        "введите exit|quit|q или нажмите Ctrl+D для выхода",
     ),
     "REPL_UNKNOWN_OPT": Entry(
         "unknown option: {opts} (help — command list)",

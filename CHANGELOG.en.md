@@ -24,6 +24,9 @@ The server address in client configs and the `uuidgen` dependency are fixed.
 - Key generation no longer needs `uuidgen` or `awk` — Python only.
 - `update list` marks v0.4.1–v0.4.3 as not recommended; `update --version` warns.
 
+### Changed
+- The Ctrl+C tip lists all exit commands: `exit`, `quit`, `q`.
+
 ## v0.4.3 — 2026-10-13
 
 Status: not recommended — a fresh remote deploy wrote `vpn` instead of the server address;
