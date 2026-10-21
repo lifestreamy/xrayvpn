@@ -163,7 +163,7 @@ uv run --project python-client xrayvpn deploy --host 1.2.3.4 --dry-run
   после подтверждения. При неопределённой среде — только инструкция.
 
 Варианты: `xrayvpn update --check` — только проверка (код выхода `10`, если обновление есть);
-`xrayvpn update list` — последние стабильные версии; `xrayvpn update --version 0.4.3` —
+`xrayvpn update list` — последние стабильные версии; `xrayvpn update --version 0.4.4` —
 конкретная версия (standalone установит её, менеджеры получат команду пиннинга);
 `--skip` / `--unskip` — скрыть уведомление до следующего релиза / вернуть; `--yes` — без
 вопросов (для скриптов). Полный список флагов: `xrayvpn update --help`.
